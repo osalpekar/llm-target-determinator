@@ -20,6 +20,10 @@ class Indexer:
         self.tokenizer = BertTokenizer.from_pretrained(model_type)
         self.test_index = None
 
+        # TODO: need to figure out how to handle this. It will allow us to map
+        # back from indices in the embedding matrix to testfiles
+        self.index_to_testfile = {}
+
     def encode_batch(self, batched_input, debug=False):
         tokenized_input = self.tokenizer(batched_input, return_tensors='pt', padding=True)
 
