@@ -19,7 +19,7 @@ class PyTorchPRDataset(Dataset):
 
     def __getitem__(self, idx):
         # TODO: Decide on what the input here would look like. This uses the following dummy JSON
-        # https://www.internalfb.com/intern/everpaste/?handle=GGeIiRVASoiByQ0BAHciFzwWGcx5bsIXAAAz
+        # pytorch_prs_with_patch_100.json
         patch = self.pull_requests[idx]["patch"]
         return self.tokenizer.encode(patch)
 
@@ -27,7 +27,7 @@ class PyTorchPRDataset(Dataset):
 def parse_args() -> Any:
     from argparse import ArgumentParser
 
-    parser = ArgumentParser("GitHub PR embedding")
+    parser = ArgumentParser("GitHub PR tokenization")
     parser.add_argument("--input", type=str, help="the input JSON file")
     return parser.parse_args()
 
@@ -35,8 +35,8 @@ def parse_args() -> Any:
 def main() -> None:
     args = parse_args()
     data = PyTorchPRDataset(args.input)
-    # Just print a dummy entry
-    print(data[0])
+    for r in data:
+        print(r)
 
 
 if __name__ == "__main__":
