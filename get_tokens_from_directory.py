@@ -102,7 +102,7 @@ def get_tokens_from_directory(directory, file_prefix):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--directory', type=str, default='pytorch')
+    parser.add_argument('--directory', type=str, default='~/pytorch')
     parser.add_argument('--file_prefix', type=str, default='test_')
     args = parser.parse_args()
     pprint.pprint(get_tokens_from_directory(args.directory, file_prefix=args.file_prefix))
