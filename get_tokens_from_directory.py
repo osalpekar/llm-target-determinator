@@ -64,7 +64,6 @@ def get_tokens_from_directory(directory):
                     else:
                         tokens = [tokens]
                     all_tokens[file_path + ":" + function_name] = tokens
-                    print(all_tokens)
     return all_tokens
 
 if __name__ == '__main__':
