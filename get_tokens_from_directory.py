@@ -133,6 +133,9 @@ def get_effective_directory(repo_dir, directory):
 
     return directory
 
+def should_process_file(file: str, root: str, desired_file_prefix: str):
+    return file.endswith(".py") and file.startswith(desired_file_prefix) and "third_party" not in root
+
 def get_tokens_from_directory(
     directory: Path, repo_dir: Path = None, file_prefix="", tests_only=True, output_file: Optional[str] = None
 ):
@@ -148,7 +151,7 @@ def get_tokens_from_directory(
     all_tokens = defaultdict(list)
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(".py") and file.startswith(file_prefix):
+            if should_process_file(file, root, file_prefix):
                 file_path = os.path.join(root, file)
                 file_tokens = get_tokens_from_file(
                     file_path=file_path, repo_dir=repo_dir, tests_only=tests_only
@@ -168,7 +171,7 @@ def get_tokens_from_directory_with_multiprocessing(directory: Path, repo_dir: Pa
     all_files = []
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(".py") and file.startswith(file_prefix):
+            if should_process_file(file, root, file_prefix):
                 file_path = os.path.join(root, file)
                 all_files.append(file_path)
 
