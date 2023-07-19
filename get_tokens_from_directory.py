@@ -48,6 +48,7 @@ def get_tokens_from_directory(directory):
         for file in files:
             if file.endswith('.py'):
                 file_path = os.path.join(root, file)
+                print(file_path)
                 functions = get_function_text_from_file(file_path)
                 for function_name, text in functions.items():
                     tokens = extract_tokens_from_text(text)
