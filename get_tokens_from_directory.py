@@ -1,5 +1,6 @@
 import argparse
 import ast
+import multiprocessing
 import os
 import pprint
 import re
@@ -153,6 +154,41 @@ def get_tokens_from_directory(
         write_token_dict_as_json(all_tokens, output_file)
     return all_tokens
 
+def process_file(file, repo_dir, tests_only):
+    return get_tokens_from_file(file_path=file, repo_dir=repo_dir, tests_only=tests_only)
+
+def get_tokens_from_directory_with_multiprocessing(directory: Path, repo_dir: Path = None, file_prefix="", tests_only=True, output_file: Optional[str] = None):
+
+    if repo_dir:
+        if directory.is_absolute():
+            if not directory.startswith(repo_dir):
+                raise Exception(f"Directory {directory} is not a subdirectory of {repo_dir}")
+        else:
+            if directory.startswith("~"):
+                raise Exception(f"Don't use '~' in your path. Directory {directory} must be a subdirectory of {repo_dir}")
+            else:
+                directory = repo_dir / directory
+    else:
+        print("No repo_dir provided. Won't be using cache")
+
+    all_files = []
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith(".py") and file.startswith(file_prefix):
+                file_path = os.path.join(root, file)
+                all_files.append(file_path)
+
+    process_file_args = [(file, repo_dir, tests_only) for file in all_files]
+    pool = multiprocessing.Pool()
+    results = pool.starmap(process_file, process_file_args)
+
+    all_tokens = defaultdict(list)
+    for file_tokens in results:
+        all_tokens.update(file_tokens)
+    if output_file:
+        # dump as json
+        write_token_dict_as_json(all_tokens, output_file)
+    return all_tokens
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -160,10 +196,11 @@ if __name__ == "__main__":
     parser.add_argument("--repo_dir", type=Path, default="~/pytorch")
     parser.add_argument("--file_prefix", type=str, default="test_")
     parser.add_argument("--output_file", type=str, default=None)
+    parser.add_argument("--use_multiprocessing", type=bool, default=True)
     args = parser.parse_args()
-    tokens = get_tokens_from_directory(
-        args.directory,
-        file_prefix=args.file_prefix,
-        repo_dir=args.repo_dir,
-        output_file=args.output_file)
+    use_multiprocessing = args.use_multiprocessing
+    if use_multiprocessing:
+        tokens = get_tokens_from_directory_with_multiprocessing(args.directory, file_prefix=args.file_prefix, output_file=args.output_file)
+    else:
+        tokens = get_tokens_from_directory(args.directory, file_prefix=args.file_prefix, output_file=args.output_file)
     pprint.pprint(tokens)
