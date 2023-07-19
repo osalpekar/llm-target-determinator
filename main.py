@@ -14,10 +14,9 @@ all_data = [[text1, text2], [text3, text4]]
 
 class Indexer:
     def __init__(self):
-        model_type = "bert-base-uncased"
-        config = BertConfig.from_pretrained(model_type, output_hidden_states=True)
-        self.model = BertModel.from_pretrained(model_type, config=config)
-        self.tokenizer = BertTokenizer.from_pretrained(model_type)
+        model_type = "bigcode/starcoderplus"
+        self.model = AutoModelForCausalLM.from_pretrained(model_type, trust_remote_code=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_type)
         self.test_index = None
 
         # TODO: need to figure out how to handle this. It will allow us to map
