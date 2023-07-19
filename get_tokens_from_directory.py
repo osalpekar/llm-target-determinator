@@ -200,7 +200,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     use_multiprocessing = args.use_multiprocessing
     if use_multiprocessing:
-        tokens = get_tokens_from_directory_with_multiprocessing(args.directory, file_prefix=args.file_prefix, output_file=args.output_file)
+        tokens = get_tokens_from_directory_with_multiprocessing(args.directory, repo_dir=args.repo_dir, file_prefix=args.file_prefix, output_file=args.output_file)
     else:
-        tokens = get_tokens_from_directory(args.directory, file_prefix=args.file_prefix, output_file=args.output_file)
+        tokens = get_tokens_from_directory(args.directory, repo_dir=args.repo_dir, file_prefix=args.file_prefix, output_file=args.output_file)
     pprint.pprint(tokens)
