@@ -1,4 +1,5 @@
 import os
+import re
 from transformers import BertTokenizer, AutoTokenizer
 import argparse
 from collections import defaultdict
@@ -53,7 +54,15 @@ def get_tokens_from_directory(directory, file_prefix):
                 functions = get_function_text_from_file(file_path)
                 print(f"Found {len(functions.items())} functions")
                 for function_name, text in functions.items():
+
+                    # Skip unless the function_name matches the regex r/.*\.test_.*/
+                    if not re.match(r'.*\.test_.*', function_name):
+                        print(f"Skipping {function_name} since it's not a test function")
+                        continue
+
+                    print(f"Extracting tokens from {function_name}")
                     tokens = extract_tokens_from_text(text)
+                    print(f"Got {tokens.shape[1]} tokens")
                     if tokens.shape[1] >= MAX_TOKENS:
                         # split tokens into chunks of MAX_TOKENS
                         tokens = torch.split(tokens, MAX_TOKENS, dim=1)
