@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 import json
+import os
 import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from get_tokens_from_directory import get_tokens_from_file
+from get_tokens_from_directory import get_tokens_from_file, should_process_file
 
 from pr_tokenization import PTTokenizer
 
@@ -48,12 +49,19 @@ class PyTorchPRDataset(Dataset):
                     )
                     all_tokens.update(tokens)
 
-                    # Reset for the next file
-                    current_file = None
-                    selected_lines = []
+                # Reset for the next file
+                current_file = None
+                selected_lines = []
 
                 filepath = mf["a"]
                 current_file = f"{self.dir}/{pr_number}/{filepath}"
+                if not should_process_file(
+                    str(os.path.basename(current_file)),
+                    str(os.path.dirname(current_file)),
+                    "",
+                ):
+                    # Not interested in this file, i.e. cpp
+                    current_file = None
                 continue
 
             ml = LINENO_REGEX.match(line)
