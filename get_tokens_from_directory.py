@@ -45,7 +45,7 @@ def extract_text_from_file(filename):
         text = file.read()
     return text
 
-def get_tokens_from_file(file_path):
+def get_tokens_from_file(file_path, tests_only=False):
     print(f"Parsing {file_path}")
 
     all_file_tokens = defaultdict(list)
@@ -55,7 +55,7 @@ def get_tokens_from_file(file_path):
     for function_name, text in functions.items():
 
         # Skip unless the function_name matches the regex r/.*\.test_.*/
-        if not function_name.startswith("test") and not re.match(r'.*\.test_.*', function_name):
+        if tests_only and not function_name.startswith("test") and not re.match(r'.*\.test_.*', function_name):
             print(f"Skipping {function_name} since it's not a test function")
             continue
 
@@ -77,7 +77,7 @@ def get_tokens_from_directory(directory, file_prefix):
         for file in files:
             if file.endswith('.py') and file.startswith(file_prefix):
                 file_path = os.path.join(root, file)
-                file_tokens = get_tokens_from_file(file_path)
+                file_tokens = get_tokens_from_file(file_path, tests_only=True)
                 all_tokens.update(file_tokens)
                 print(f"Done parsing {file_path}")
     return all_tokens
