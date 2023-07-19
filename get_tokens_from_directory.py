@@ -104,16 +104,7 @@ def write_token_dict_as_json(token_dict, filename):
     with open(filename, 'w') as f:
         f.write(json.dumps(writable_dict))
 
-def get_tokens_from_directory(
-    directory: Path, repo_dir: Path = None, file_prefix="", tests_only=True, output_file: Optional[str] = None
-):
-    """
-    directory: Should be inside repo_dir if you want to use the cache (can be relative to repo_dir, e.g. repo_dir="~/pytorch", directory="test")
-    repo_dir: Path to repository. Required if you want to use the cache
-    file_prefix: If set, only files that start with this prefix will be parsed
-    output_file: If set, the tokens will be written to this file. If set to None (default), will not write to file
-    """
-
+def get_effective_directory(repo_dir, directory):
     if repo_dir:
         if not repo_dir.is_absolute():
             raise Exception(f"repo_dir {repo_dir} must be an absolute path")
@@ -140,6 +131,20 @@ def get_tokens_from_directory(
 
     print(f"Directory: {directory}. Exists: {directory.exists()}")
 
+    return directory
+
+def get_tokens_from_directory(
+    directory: Path, repo_dir: Path = None, file_prefix="", tests_only=True, output_file: Optional[str] = None
+):
+    """
+    directory: Should be inside repo_dir if you want to use the cache (can be relative to repo_dir, e.g. repo_dir="~/pytorch", directory="test")
+    repo_dir: Path to repository. Required if you want to use the cache
+    file_prefix: If set, only files that start with this prefix will be parsed
+    output_file: If set, the tokens will be written to this file. If set to None (default), will not write to file
+    """
+
+    directory = get_effective_directory(repo_dir, directory)
+
     all_tokens = defaultdict(list)
     for root, dirs, files in os.walk(directory):
         for file in files:
@@ -158,18 +163,7 @@ def process_file(file, repo_dir, tests_only):
     return get_tokens_from_file(file_path=file, repo_dir=repo_dir, tests_only=tests_only)
 
 def get_tokens_from_directory_with_multiprocessing(directory: Path, repo_dir: Path = None, file_prefix="", tests_only=True, output_file: Optional[str] = None):
-
-    if repo_dir:
-        if directory.is_absolute():
-            if not directory.startswith(repo_dir):
-                raise Exception(f"Directory {directory} is not a subdirectory of {repo_dir}")
-        else:
-            if directory.startswith("~"):
-                raise Exception(f"Don't use '~' in your path. Directory {directory} must be a subdirectory of {repo_dir}")
-            else:
-                directory = repo_dir / directory
-    else:
-        print("No repo_dir provided. Won't be using cache")
+    directory = get_effective_directory(repo_dir, directory)
 
     all_files = []
     for root, dirs, files in os.walk(directory):
