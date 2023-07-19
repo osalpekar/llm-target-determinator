@@ -51,7 +51,6 @@ def get_tokens_from_directory(directory):
                 functions = get_function_text_from_file(file_path)
                 for function_name, text in functions.items():
                     tokens = extract_tokens_from_text(text)
-                    # print shape of tokens
                     if tokens["input_ids"].shape[1] >= MAX_TOKENS:
                         # split tokens into chunks of MAX_TOKENS
                         for i in range(0, tokens["input_ids"].shape[1], MAX_TOKENS):
