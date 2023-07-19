@@ -56,7 +56,7 @@ def get_tokens_from_directory(directory, file_prefix):
                 for function_name, text in functions.items():
 
                     # Skip unless the function_name matches the regex r/.*\.test_.*/
-                    if not re.match(r'.*\.test_.*', function_name):
+                    if not function_name.startswith("test") and not re.match(r'.*\.test_.*', function_name):
                         print(f"Skipping {function_name} since it's not a test function")
                         continue
 
