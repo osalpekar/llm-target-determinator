@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 
 import json
-from transformers import AutoTokenizer
-from torch.utils.data import Dataset
 from typing import Any
+
+from torch.utils.data import Dataset
+from transformers import AutoTokenizer
+
+from torch.utils.data import Dataset
+from transformers import AutoTokenizer
 
 class PTTokenizer:
     def __init__(self, model_checkpoint: str = "bigcode/starcoderplus"):
         self.model_checkpoint = model_checkpoint
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_checkpoint)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
     def encode(self, data: str) -> Any:
-        return self.tokenizer.encode(data, return_tensors="pt")
+        return self.tokenizer.encode(data, return_tensors="pt", padding=True)
 
     def decode(self, tokenized_data) -> str:
         return self.tokenizer.decode(tokenized_data)
@@ -27,8 +33,8 @@ class PyTorchPRDataset(Dataset):
         return len(self.pull_requests)
 
     def __getitem__(self, idx):
-        # TODO: Decide on what the input here would look like. This uses the following dummy JSON
-        # pytorch_prs_with_patch_100.json
+        # TODO: Decide on what the input here would look like. This uses the
+        # following dummy JSON pytorch_prs_with_patch_100.json
         patch = self.pull_requests[idx]["patch"]
         return self.tokenizer.encode(patch)
 
