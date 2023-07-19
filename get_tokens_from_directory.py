@@ -1,9 +1,4 @@
 import os
-<<<<<<< HEAD
-from transformers import BertTokenizer, AutoModelForCausalLM
-=======
-from transformers import BertTokenizer, AutoTokenizer
->>>>>>> a93d8a5aa24bd6318189d0a34f1bb22fbdd42d82
 import argparse
 from collections import defaultdict
 import ast
