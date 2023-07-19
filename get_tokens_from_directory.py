@@ -4,23 +4,15 @@ import os
 import pprint
 import re
 from collections import defaultdict
-<<<<<<< HEAD
-import ast
-from typing import Dict, Optional
-import pprint
-import torch
-import pr_tokenization
-from pathlib import Path
-import json
-=======
 from pathlib import Path
 from typing import Dict
 
 import pr_tokenization
 import torch
->>>>>>> c14c8628f5cb8b8dc22f81280fdcf0129fc79687
+import json
 
 from cache_data import TensorCache
+from typing import Optional
 
 MAX_TOKENS = 8292
 
