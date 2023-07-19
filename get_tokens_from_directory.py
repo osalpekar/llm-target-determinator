@@ -1,21 +1,22 @@
-import os
-import re
-from transformers import BertTokenizer, AutoTokenizer
 import argparse
-from collections import defaultdict
 import ast
-from typing import Dict
+import os
 import pprint
-import torch
-import pr_tokenization
+import re
+from collections import defaultdict
 from pathlib import Path
+from typing import Dict
+
+import pr_tokenization
+import torch
 
 from cache_data import TensorCache
 
 MAX_TOKENS = 8292
 
+
 def get_function_text_from_file(filename: str) -> Dict[str, str]:
-    with open(filename, 'r') as file:
+    with open(filename, "r") as file:
         content = file.read()
 
     module = ast.parse(content)
@@ -32,21 +33,24 @@ def get_function_text_from_file(filename: str) -> Dict[str, str]:
             # If the node is a class, we also want to get its methods
             for sub_node in node.body:
                 if isinstance(sub_node, ast.FunctionDef):
-                    signature = node.name + '.' + sub_node.name
+                    signature = node.name + "." + sub_node.name
                     body = ast.get_source_segment(content, sub_node)
                     functions[signature] = body
 
     return functions
 
-def extract_tokens_from_text(text):
+
+def extract_tokens_from_text(text: str):
     tokenizer = pr_tokenization.PTTokenizer()
     tokens = tokenizer.encode(text)
     return tokens
 
+
 def extract_text_from_file(filename):
-    with open(filename, 'r') as file:
+    with open(filename, "r") as file:
         text = file.read()
     return text
+
 
 def get_tokens_from_file(file_path, repo_dir, tests_only=False):
     """
@@ -66,13 +70,15 @@ def get_tokens_from_file(file_path, repo_dir, tests_only=False):
         print(f"Cache hit for {relative_file_path}")
         return cache.get_cache_data(relative_file_path)
 
-
     functions = get_function_text_from_file(file_path)
     print(f"Found {len(functions.items())} functions")
     for function_name, text in functions.items():
-
         # Skip unless the function_name matches the regex r/.*\.test_.*/
-        if tests_only and not function_name.startswith("test") and not re.match(r'.*\.test_.*', function_name):
+        if (
+            tests_only
+            and not function_name.startswith("test")
+            and not re.match(r".*\.test_.*", function_name)
+        ):
             print(f"Skipping {function_name} since it's not a test function")
             continue
 
@@ -91,6 +97,7 @@ def get_tokens_from_file(file_path, repo_dir, tests_only=False):
 
     return all_file_tokens
 
+
 def get_tokens_from_directory(directory: Path, repo_dir: Path = None, file_prefix=""):
     """
     directory: Should be inside repo_dir if you want to use the cache (can be relative to repo_dir, e.g. repo_dir="~/pytorch", directory="test")
@@ -102,10 +109,14 @@ def get_tokens_from_directory(directory: Path, repo_dir: Path = None, file_prefi
         if directory.is_absolute():
             # Ensure directory is a subdirectory of repo_dir
             if not directory.startswith(repo_dir):
-                raise Exception(f"Directory {directory} is not a subdirectory of {repo_dir}")
+                raise Exception(
+                    f"Directory {directory} is not a subdirectory of {repo_dir}"
+                )
         else:
             if directory.startswith("~"):
-                raise Exception(f"Don't use '~' in your path. Directory {directory} must be a subdirectory of {repo_dir}")
+                raise Exception(
+                    f"Don't use '~' in your path. Directory {directory} must be a subdirectory of {repo_dir}"
+                )
             else:
                 directory = repo_dir / directory
 
@@ -117,17 +128,22 @@ def get_tokens_from_directory(directory: Path, repo_dir: Path = None, file_prefi
     all_tokens = defaultdict(list)
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith('.py') and file.startswith(file_prefix):
+            if file.endswith(".py") and file.startswith(file_prefix):
                 file_path = os.path.join(root, file)
-                file_tokens = get_tokens_from_file(file_path=file_path, repo_dir=repo_dir, tests_only=True)
+                file_tokens = get_tokens_from_file(
+                    file_path=file_path, repo_dir=repo_dir, tests_only=True
+                )
                 all_tokens.update(file_tokens)
                 print(f"Done parsing {file_path}")
     return all_tokens
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--directory', type=str, default='')
-    parser.add_argument('--repo_dir', type=str, default='~/pytorch')
-    parser.add_argument('--file_prefix', type=str, default='test_')
+    parser.add_argument("--directory", type=str, default="")
+    parser.add_argument("--repo_dir", type=str, default="~/pytorch")
+    parser.add_argument("--file_prefix", type=str, default="test_")
     args = parser.parse_args()
-    pprint.pprint(get_tokens_from_directory(args.directory, file_prefix=args.file_prefix))
+    pprint.pprint(
+        get_tokens_from_directory(args.directory, file_prefix=args.file_prefix)
+    )
