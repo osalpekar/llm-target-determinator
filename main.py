@@ -5,8 +5,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from transformers import BertTokenizer, BertModel, BertConfig
+from transformers import BertTokenizer, BertModel, BertConfig, AutoModelForCausalLM, AutoTokenizer
+from typing import Any, Dict
+from pathlib import Path
 
+import pr_tokenization
 
 text1 = "Replace me by any text you'd like."
 text2 = "Hello me by any text you'd like."
@@ -22,36 +25,38 @@ class Indexer:
             model_type,
             trust_remote_code=True
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_type)
+        self.tokenizer = pr_tokenization.PTTokenizer()
         self.test_index = None
 
         # TODO: need to figure out how to handle this. It will allow us to map
         # back from indices in the embedding matrix to testfiles
         self.index_to_testfile = {}
 
-    def encode_batch(self, batched_input, debug=False):
-        # tokenized_input = self.tokenizer(
-        #     batched_input,
-        #     return_tensors='pt',
-        #     padding=True
-        # )
+    def get_embeddings(self, dataset, debug=False):
+        tokenized_input = self.tokenizer.encode(dataset)
 
         if debug:
             print(tokenized_input)
-            print(self.tokenizer.decode(tokenized_input['input_ids'][0]))
+            print(self.tokenizer.decode(tokenized_input))
 
-        out = self.model(**tokenized_input)
-        return out[1]
-    
+        embedding = self.model(tokenized_input)
+        return embedding
+
     def index(self, tokens_file):
+        """
+        Get the embeddings for all test files and save them.  These will be compared against the PR diff embeddings later.
+
+        This function is expected to only be called once.
+        """
         embedding_list = []
 
+        # Contains a dictionary mapping test file names to their contents
         with open(tokens_file) as f:
-            data = json.load(f)
+            test_file_to_content_mapping = json.load(f)
 
-        for idx, filename in enumerate(data):
-            embeddings = self.encode_batch(data[filename], debug=False)
-            embeddings_summed = torch.sum(embeddings, dim=0).reshape(1, 768)
+        for idx, filename in enumerate(test_file_to_content_mapping):
+            embeddings = self.get_embeddings(test_file_to_content_mapping[filename], debug=False)
+            embeddings_summed = torch.sum(embeddings, dim=0).reshape(1, 768) # Why is summing necessary?
             embedding_list.append(embeddings_summed)
             self.index_to_testfile[idx] = filename
 
@@ -64,14 +69,14 @@ class TwoTower:
         self.indexer.index(tokens_file)
 
     def predict(self, diff):
-        diff_embedding = self.indexer.encode_batch(batched_input)
-        
+        diff_embedding = self.indexer.get_embeddings(batched_input)
+
         # Each row in the similarity_matrix corresponds to the per-test scores
         # for a given diff.
         similarity_matrix = torch.matmul(diff_embedding, self.indexer.test_index.T)
 
         return similarity_matrix
-        
+
 
 def parse_args() -> Any:
     parser = ArgumentParser("Model Trainer")
@@ -81,8 +86,8 @@ def parse_args() -> Any:
 
 def main() -> None:
     args = parse_args()
-    self.indexer = Indexer()
-    self.indexer.index(args.code_tokens)
+    indexer = Indexer()
+    indexer.index(args.code_tokens)
 
 
 if __name__ == "__main__":

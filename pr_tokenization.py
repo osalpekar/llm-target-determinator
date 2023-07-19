@@ -5,11 +5,20 @@ from transformers import AutoTokenizer
 from torch.utils.data import Dataset
 from typing import Any
 
+class PTTokenizer:
+    def __init__(self, model_checkpoint: str = "bigcode/starcoderplus"):
+        self.model_checkpoint = model_checkpoint
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_checkpoint)
+
+    def encode(self, data: str) -> Any:
+        return self.tokenizer.encode(data, return_tensors="pt")
+
+    def decode(self, tokenized_data) -> str:
+        return self.tokenizer.decode(tokenized_data)
 
 class PyTorchPRDataset(Dataset):
     def __init__(self, pull_requests_file: str):
-        self.checkpoint = "bigcode/starcoderplus"
-        self.tokenizer = AutoTokenizer.from_pretrained(self.checkpoint)
+        self.tokenizer = PTTokenizer()
 
         with open(pull_requests_file) as f:
             self.pull_requests = json.load(f)
