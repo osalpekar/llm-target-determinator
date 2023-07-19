@@ -8,6 +8,7 @@ from typing import Dict
 import pprint
 import torch
 import pr_tokenization
+
 MAX_TOKENS = 8292
 
 def get_function_text_from_file(filename: str) -> Dict[str, str]:
@@ -44,38 +45,40 @@ def extract_text_from_file(filename):
         text = file.read()
     return text
 
+def get_tokens_from_file(file_path):
+    print(f"Parsing {file_path}")
+
+    all_file_tokens = defaultdict(list)
+
+    functions = get_function_text_from_file(file_path)
+    print(f"Found {len(functions.items())} functions")
+    for function_name, text in functions.items():
+
+        # Skip unless the function_name matches the regex r/.*\.test_.*/
+        if not function_name.startswith("test") and not re.match(r'.*\.test_.*', function_name):
+            print(f"Skipping {function_name} since it's not a test function")
+            continue
+
+        print(f"Extracting tokens from {function_name}")
+        tokens = extract_tokens_from_text(text, function_name=function_name)
+        print(f"Got {tokens.shape[1]} tokens")
+        if tokens.shape[1] >= MAX_TOKENS:
+            # split tokens into chunks of MAX_TOKENS
+            tokens = torch.split(tokens, MAX_TOKENS, dim=1)
+        else:
+            tokens = [tokens]
+        all_file_tokens[file_path + ":" + function_name] = tokens
+
+    return all_file_tokens
+
 def get_tokens_from_directory(directory, file_prefix):
     all_tokens = defaultdict(list)
     for root, dirs, files in os.walk(directory):
         for file in files:
             if file.endswith('.py') and file.startswith(file_prefix):
                 file_path = os.path.join(root, file)
-                print(f"Parsing {file_path}")
-                functions = get_function_text_from_file(file_path)
-                print(f"Found {len(functions.items())} functions")
-                for function_name, text in functions.items():
-
-                    # Skip unless the function_name matches the regex r/.*\.test_.*/
-                    if not function_name.startswith("test") and not re.match(r'.*\.test_.*', function_name):
-                        print(f"Skipping {function_name} since it's not a test function")
-                        continue
-
-                    print(f"Extracting tokens from {function_name}")
-                    tokens = extract_tokens_from_text(text)
-                    print(f"Got {tokens.shape[1]} tokens")
-                    if tokens.shape[1] >= MAX_TOKENS:
-                        # split tokens into chunks of MAX_TOKENS
-                        tokens = torch.split(tokens, MAX_TOKENS, dim=1)
-                        # for i in range(0, tokens["input_ids"].shape[1], MAX_TOKENS):
-                        #     token_chunk = {
-                        #         "input_ids": tokens["input_ids"][:, i:i+MAX_TOKENS],
-                        #         "token_type_ids": tokens["token_type_ids"][:, i:i+MAX_TOKENS],
-                        #         "attention_mask": tokens["attention_mask"][:, i:i+MAX_TOKENS]
-                        #     }
-                        #     all_tokens[file_path + ":" + function_name].append(token_chunk)
-                    else:
-                        tokens = [tokens]
-                    all_tokens[file_path + ":" + function_name] = tokens
+                file_tokens = get_tokens_from_file(file_path)
+                all_tokens.update(file_tokens)
                 print(f"Done parsing {file_path}")
     return all_tokens
 
