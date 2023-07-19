@@ -1,4 +1,5 @@
 import os
+from transformers import BertTokenizer, AutoTokenizer
 import argparse
 from collections import defaultdict
 import ast
@@ -11,11 +12,11 @@ MAX_TOKENS = 8292
 def get_function_text_from_file(filename: str) -> Dict[str, str]:
     with open(filename, 'r') as file:
         content = file.read()
-    
+
     module = ast.parse(content)
-    
+
     functions = {}
-    
+
     for node in ast.walk(module):
         if isinstance(node, ast.FunctionDef):
             # If the node is a function, extract its name and its arguments
@@ -29,7 +30,7 @@ def get_function_text_from_file(filename: str) -> Dict[str, str]:
                     signature = node.name + '.' + sub_node.name
                     body = ast.get_source_segment(content, sub_node)
                     functions[signature] = body
-                    
+
     return functions
 
 def extract_tokens_from_text(text):
@@ -42,14 +43,15 @@ def extract_text_from_file(filename):
         text = file.read()
     return text
 
-def get_tokens_from_directory(directory):
+def get_tokens_from_directory(directory, file_prefix):
     all_tokens = defaultdict(list)
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith('.py'):
+            if file.endswith('.py') and file.startswith(file_prefix):
                 file_path = os.path.join(root, file)
-                print(file_path)
+                print(f"Parsing {file_path}")
                 functions = get_function_text_from_file(file_path)
+                print(f"Found {len(functions.items())} functions")
                 for function_name, text in functions.items():
                     tokens = extract_tokens_from_text(text)
                     if tokens.shape[1] >= MAX_TOKENS:
@@ -65,10 +67,12 @@ def get_tokens_from_directory(directory):
                     else:
                         tokens = [tokens]
                     all_tokens[file_path + ":" + function_name] = tokens
+                print(f"Done parsing {file_path}")
     return all_tokens
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--directory', type=str, default='pytorch')
+    parser.add_argument('--file_prefix', type=str, default='test_')
     args = parser.parse_args()
-    pprint.pprint(get_tokens_from_directory(args.directory))
+    pprint.pprint(get_tokens_from_directory(args.directory, file_prefix=args.file_prefix))
