@@ -25,9 +25,9 @@ class PyTorchPRDataset(Dataset):
         pr_number = self.pull_requests[idx]["number"]
         tokenized_functions = get_tokens_from_directory(
             f"{self.dir}/{pr_number}",
+            repo_dir=None,
             file_prefix="",
             tests_only=False,
-            enable_cache=False,
         )
         return tokenized_functions
 
@@ -45,8 +45,7 @@ def main() -> None:
     args = parse_args()
     data = PyTorchPRDataset(args.input, args.pr_dir)
     for r in data:
-        print(r.shape)
-        break
+        print(len(r))
 
 
 if __name__ == "__main__":

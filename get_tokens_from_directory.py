@@ -63,8 +63,7 @@ def get_tokens_from_file(file_path, repo_dir, tests_only=False):
     cache = None
     if repo_dir:
         cache = TensorCache(Path("cache"), "tokens_from_file")
-
-    relative_file_path = file_path.replace(repo_dir, "")
+        relative_file_path = file_path.replace(repo_dir, "")
 
     if cache and cache.get_cache_data(relative_file_path):
         print(f"Cache hit for {relative_file_path}")
@@ -98,7 +97,9 @@ def get_tokens_from_file(file_path, repo_dir, tests_only=False):
     return all_file_tokens
 
 
-def get_tokens_from_directory(directory: Path, repo_dir: Path = None, file_prefix=""):
+def get_tokens_from_directory(
+    directory: Path, repo_dir: Path = None, file_prefix="", tests_only=True
+):
     """
     directory: Should be inside repo_dir if you want to use the cache (can be relative to repo_dir, e.g. repo_dir="~/pytorch", directory="test")
     repo_dir: Path to repository. Required if you want to use the cache
@@ -131,7 +132,7 @@ def get_tokens_from_directory(directory: Path, repo_dir: Path = None, file_prefi
             if file.endswith(".py") and file.startswith(file_prefix):
                 file_path = os.path.join(root, file)
                 file_tokens = get_tokens_from_file(
-                    file_path=file_path, repo_dir=repo_dir, tests_only=True
+                    file_path=file_path, repo_dir=repo_dir, tests_only=tests_only
                 )
                 all_tokens.update(file_tokens)
                 print(f"Done parsing {file_path}")
