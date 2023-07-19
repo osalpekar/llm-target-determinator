@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 
 import json
+import re
+from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
-from get_tokens_from_directory import get_tokens_from_directory
+from get_tokens_from_directory import get_tokens_from_file
+
 from pr_tokenization import PTTokenizer
 
 from torch.utils.data import Dataset
+
+
+DIFF_REGEX = re.compile(r"^diff --git a/(?P<a>.+) b/(?P<b>.+)$")
+LINENO_REGEX = re.compile(r"@@ -(?P<begin>\d+),\d+ \+(?P<end>\d+),\d+ @@")
 
 
 class PyTorchPRDataset(Dataset):
@@ -23,13 +31,51 @@ class PyTorchPRDataset(Dataset):
     def __getitem__(self, idx):
         patch = self.pull_requests[idx]["patch"]
         pr_number = self.pull_requests[idx]["number"]
-        tokenized_functions = get_tokens_from_directory(
-            f"{self.dir}/{pr_number}",
-            repo_dir=None,
-            file_prefix="",
-            tests_only=False,
-        )
-        return tokenized_functions
+
+        print(patch)
+
+        current_file = None
+        selected_lines = []
+        all_tokens = defaultdict(list)
+
+        for line in patch.split("\n"):
+            mf = DIFF_REGEX.match(line)
+            if mf:
+                if current_file:
+                    tokens = get_tokens_from_file(
+                        Path(current_file),
+                        repo_dir=None,
+                        tests_only=False,
+                        selected_lines=selected_lines,
+                    )
+                    all_tokens.update(tokens)
+
+                    # Reset for the next file
+                    current_file = None
+                    selected_lines = []
+
+                filepath = mf["a"]
+                current_file = f"{self.dir}/{pr_number}/{filepath}"
+                continue
+
+            ml = LINENO_REGEX.match(line)
+            if not ml:
+                continue
+
+            begin_lineno = int(ml["begin"])
+            end_lineno = int(ml["end"])
+            selected_lines.append((begin_lineno, end_lineno))
+
+        if current_file:
+            tokens = get_tokens_from_file(
+                Path(current_file),
+                repo_dir=None,
+                tests_only=False,
+                selected_lines=selected_lines,
+            )
+            all_tokens.update(tokens)
+
+        return all_tokens
 
 
 def parse_args() -> Any:
@@ -44,8 +90,13 @@ def parse_args() -> Any:
 def main() -> None:
     args = parse_args()
     data = PyTorchPRDataset(args.input, args.pr_dir)
+    count = 0
     for r in data:
-        print(len(r))
+        print(r)
+
+        count += 1
+        if count == 2:
+            break
 
 
 if __name__ == "__main__":

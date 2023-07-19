@@ -6,7 +6,7 @@ import pprint
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, Tuple
 
 import pr_tokenization
 import torch
@@ -18,7 +18,23 @@ from typing import Optional
 MAX_TOKENS = 8292
 
 
-def get_function_text_from_file(filename: str) -> Dict[str, str]:
+def get_function_text_from_file(filename: str, selected_lines: List[Tuple[int, int]] = []) -> Dict[str, str]:
+    def _is_in_scope(begin_lineno, end_lineno, selected_lines) -> bool:
+        if not selected_lines:
+            return True
+
+        overlapping = False
+        for scope in selected_lines:
+            selected_begin = scope[0]
+            selected_end = scope[1]
+
+            if end_lineno < selected_begin or begin_lineno > selected_end:
+                continue
+
+            overlapping = True
+
+        return overlapping
+
     with open(filename, "r") as file:
         content = file.read()
 
@@ -30,12 +46,14 @@ def get_function_text_from_file(filename: str) -> Dict[str, str]:
         if isinstance(node, ast.FunctionDef):
             # If the node is a function, extract its name and its arguments
             signature = node.name
+            if not _is_in_scope(node.lineno, node.end_lineno, selected_lines):
+                continue
             body = ast.get_source_segment(content, node)
             functions[signature] = body
         elif isinstance(node, ast.ClassDef):
             # If the node is a class, we also want to get its methods
             for sub_node in node.body:
-                if isinstance(sub_node, ast.FunctionDef):
+                if isinstance(sub_node, ast.FunctionDef) and _is_in_scope(sub_node.lineno, sub_node.end_lineno, selected_lines):
                     signature = node.name + "." + sub_node.name
                     body = ast.get_source_segment(content, sub_node)
                     functions[signature] = body
@@ -55,7 +73,7 @@ def extract_text_from_file(filename):
     return text
 
 
-def get_tokens_from_file(file_path: Path, repo_dir: Path, tests_only:bool = False):
+def get_tokens_from_file(file_path: Path, repo_dir: Path, tests_only: bool = False, selected_lines: List[Tuple[int, int]] = []):
     """
     root_dir is generally the repository root, so that you can use the cached data
     """
@@ -72,7 +90,7 @@ def get_tokens_from_file(file_path: Path, repo_dir: Path, tests_only:bool = Fals
         print(f"Cache hit for {relative_file_path}")
         return cache.get_cache_data(relative_file_path)
 
-    functions = get_function_text_from_file(file_path)
+    functions = get_function_text_from_file(file_path, selected_lines)
     print(f"Found {len(functions.items())} functions")
     for function_name, text in functions.items():
         # Skip unless the function_name matches the regex r/.*\.test_.*/
@@ -92,7 +110,7 @@ def get_tokens_from_file(file_path: Path, repo_dir: Path, tests_only:bool = Fals
             tokens = torch.split(tokens, MAX_TOKENS, dim=1)
         else:
             tokens = [tokens]
-        all_file_tokens[file_path + ":" + function_name] = tokens
+        all_file_tokens[str(file_path) + ":" + function_name] = tokens
 
     # Save file to cache
     cache.save_cache_data(relative_file_path, all_file_tokens) if cache else None
@@ -127,7 +145,6 @@ def get_effective_directory(repo_dir, directory):
         # Really, we should block not using the repo_dir.
         # But leaving this route open for testing
         print("No repo_dir provided. Won't be using cache")
-
 
     print(f"Directory: {directory}. Exists: {directory.exists()}")
 
