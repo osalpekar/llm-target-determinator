@@ -35,7 +35,8 @@ def get_function_text_from_file(filename: str) -> Dict[str, str]:
 def extract_tokens_from_text(text):
     model_type = "bigcode/starcoderplus"
     tokenizer = AutoTokenizer.from_pretrained(model_type, use_auth_token=True)
-    tokens = tokenizer.tokenize(text, return_tensors="pt", padding=True)
+    tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+    tokens = tokenizer.encode(text, return_tensors="pt", padding=True)
     return tokens
 
 def extract_text_from_file(filename):
