@@ -6,7 +6,7 @@ import ast
 from typing import Dict
 import pprint
 import torch
-MAX_TOKENS = 512
+MAX_TOKENS = 8292
 
 def get_function_text_from_file(filename: str) -> Dict[str, str]:
     with open(filename, 'r') as file:
