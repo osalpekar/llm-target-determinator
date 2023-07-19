@@ -4,11 +4,12 @@ from transformers import BertTokenizer, AutoTokenizer
 import argparse
 from collections import defaultdict
 import ast
-from typing import Dict
+from typing import Dict, Optional
 import pprint
 import torch
 import pr_tokenization
 from pathlib import Path
+import json
 
 from cache_data import TensorCache
 
@@ -89,9 +90,15 @@ def get_tokens_from_file(file_path, root_dir, tests_only=False):
 
     return all_file_tokens
 
-def get_tokens_from_directory(directory, file_prefix=""):
+def write_token_dict_as_json(token_dict, filename):
+    writable_dict = {key: [token.tolist() for token in tokens] for key, tokens in token_dict.items()}
+    with open(filename, 'w') as f:
+        f.write(json.dumps(writable_dict))
+
+def get_tokens_from_directory(directory, file_prefix="", output_file: Optional[str] = None):
     """
     file_prefix: If set, only files that start with this prefix will be parsed
+    output_file: If set, the tokens will be written to this file. If set to None (default), will not write to file
     """
     all_tokens = defaultdict(list)
     for root, dirs, files in os.walk(directory):
@@ -101,6 +108,8 @@ def get_tokens_from_directory(directory, file_prefix=""):
                 file_tokens = get_tokens_from_file(file_path=file_path, root_dir=directory, tests_only=True)
                 all_tokens.update(file_tokens)
                 print(f"Done parsing {file_path}")
+    if output_file:
+        write_token_dict_as_json(all_tokens, output_file)
     return all_tokens
 
 if __name__ == '__main__':
@@ -108,4 +117,4 @@ if __name__ == '__main__':
     parser.add_argument('--directory', type=str, default='~/pytorch')
     parser.add_argument('--file_prefix', type=str, default='test_')
     args = parser.parse_args()
-    pprint.pprint(get_tokens_from_directory(args.directory, file_prefix=args.file_prefix))
+    pprint.pprint(get_tokens_from_directory(args.directory, file_prefix=args.file_prefix, output_file="tokens.json"))
