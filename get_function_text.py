@@ -1,31 +1,31 @@
 import ast
-
-def parse_python_functions(filename):
-    with open(filename, "r") as source:
-        tree = ast.parse(source.read())
-        
-    for node in ast.walk(tree):
+import inspect
+import pprint
+def get_functions_from_file(filename):
+    with open(filename, 'r') as file:
+        content = file.read()
+    
+    module = ast.parse(content)
+    
+    functions = {}
+    
+    for node in ast.walk(module):
         if isinstance(node, ast.FunctionDef):
-            print(f"Function {node.name} found at Line {node.lineno}:")
-            
-            # Extract the source lines of the function
-            lines = []
-            for child in ast.iter_child_nodes(node):
-                if isinstance(child, ast.Expr) and isinstance(child.value, ast.Str):  # Detect docstring
-                    continue
-                if isinstance(child, ast.arguments):
-                    continue
-                print(ast.dump(child))
-                start_line = child.lineno
-                end_line = child.end_lineno if hasattr(child, 'end_lineno') else start_line
-                lines.extend(list(range(start_line, end_line + 1)))
+            # If the node is a function, extract its name and its arguments
+            signature = node.name
+            body = ast.get_source_segment(content, node)
+            functions[signature] = body
+        elif isinstance(node, ast.ClassDef):
+            # If the node is a class, we also want to get its methods
+            for sub_node in node.body:
+                if isinstance(sub_node, ast.FunctionDef):
+                    signature = node.name + '.' + sub_node.name
+                    body = ast.get_source_segment(content, sub_node)
+                    functions[signature] = body
+                    
+    return functions
 
-            # Print the source lines of the function
-            with open(filename, 'r') as f:
-                all_lines = f.readlines()
-                for line_num in lines:
-                    print(all_lines[line_num - 1], end='')
-            print("\n")
 
 # Provide the filename here
-parse_python_functions("/Users/sahanp/pytorch/torch/nn/modules/loss.py")
+output = get_functions_from_file("/Users/sahanp/pytorch/torch/nn/modules/loss.py")
+pprint.pprint(output)
