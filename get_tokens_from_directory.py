@@ -89,7 +89,10 @@ def get_tokens_from_file(file_path, root_dir, tests_only=False):
 
     return all_file_tokens
 
-def get_tokens_from_directory(directory, file_prefix):
+def get_tokens_from_directory(directory, file_prefix=""):
+    """
+    file_prefix: If set, only files that start with this prefix will be parsed
+    """
     all_tokens = defaultdict(list)
     for root, dirs, files in os.walk(directory):
         for file in files:
