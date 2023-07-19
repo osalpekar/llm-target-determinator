@@ -8,6 +8,9 @@ from typing import Dict
 import pprint
 import torch
 import pr_tokenization
+from pathlib import Path
+
+from cache_data import TensorCache
 
 MAX_TOKENS = 8292
 
@@ -45,10 +48,22 @@ def extract_text_from_file(filename):
         text = file.read()
     return text
 
-def get_tokens_from_file(file_path, tests_only=False):
+def get_tokens_from_file(file_path, root_dir, tests_only=False):
+    """
+    root_dir is generally the repository root, so that you can use the cached data
+    """
     print(f"Parsing {file_path}")
 
     all_file_tokens = defaultdict(list)
+
+    cache = TensorCache(Path("cache"), "tokens_from_file")
+
+    relative_file_path = file_path.replace(root_dir, "")
+
+    if cache.get_cache_data(relative_file_path):
+        print(f"Cache hit for {relative_file_path}")
+        return cache.get_cache_data(relative_file_path)
+
 
     functions = get_function_text_from_file(file_path)
     print(f"Found {len(functions.items())} functions")
@@ -60,7 +75,7 @@ def get_tokens_from_file(file_path, tests_only=False):
             continue
 
         print(f"Extracting tokens from {function_name}")
-        tokens = extract_tokens_from_text(text, function_name=function_name)
+        tokens = extract_tokens_from_text(text)
         print(f"Got {tokens.shape[1]} tokens")
         if tokens.shape[1] >= MAX_TOKENS:
             # split tokens into chunks of MAX_TOKENS
@@ -68,6 +83,9 @@ def get_tokens_from_file(file_path, tests_only=False):
         else:
             tokens = [tokens]
         all_file_tokens[file_path + ":" + function_name] = tokens
+
+    # Save file to cache
+    cache.save_cache_data(relative_file_path, all_file_tokens)
 
     return all_file_tokens
 
@@ -77,7 +95,7 @@ def get_tokens_from_directory(directory, file_prefix):
         for file in files:
             if file.endswith('.py') and file.startswith(file_prefix):
                 file_path = os.path.join(root, file)
-                file_tokens = get_tokens_from_file(file_path, tests_only=True)
+                file_tokens = get_tokens_from_file(file_path=file_path, root_dir=directory, tests_only=True)
                 all_tokens.update(file_tokens)
                 print(f"Done parsing {file_path}")
     return all_tokens
