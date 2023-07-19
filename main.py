@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from argparse import ArgumentParser
 
 import torch
@@ -28,9 +29,7 @@ class Indexer:
         self.tokenizer = pr_tokenization.PTTokenizer()
         self.test_index = None
 
-        # TODO: need to figure out how to handle this. It will allow us to map
-        # back from indices in the embedding matrix to testfiles
-        self.index_to_testfile = {}
+        self.index_to_testfile_func = {}
 
     def get_embeddings(self, dataset, debug=False):
         tokenized_input = self.tokenizer.encode(dataset)
@@ -54,13 +53,19 @@ class Indexer:
         with open(tokens_file) as f:
             test_file_to_content_mapping = json.load(f)
 
-        for idx, filename in enumerate(test_file_to_content_mapping):
-            embeddings = self.get_embeddings(test_file_to_content_mapping[filename], debug=False)
+        for idx, filename_func in enumerate(test_file_to_content_mapping):
+            embeddings = self.get_embeddings(test_file_to_content_mapping[filename_func], debug=False)
             embeddings_summed = torch.sum(embeddings, dim=0).reshape(1, 768) # Why is summing necessary?
             embedding_list.append(embeddings_summed)
-            self.index_to_testfile[idx] = filename
+            self.index_to_testfile_func[idx] = filename_func
 
         self.test_index = torch.cat(embedding_list, dim=0)
+
+        curr_time = datetime.now()
+        torch.save(self.test_index, f"test_embeddings_{curr_time}.pt")
+
+        with open(f"func_index_mapping_{curr_time}.json", "w") as f:
+            json.dump(self.index_to_testfile_func, f)
 
 
 class TwoTower:
