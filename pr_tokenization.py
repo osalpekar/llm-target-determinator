@@ -12,7 +12,7 @@ from transformers import AutoTokenizer
 class PTTokenizer:
     def __init__(self, model_checkpoint: str = "bigcode/starcoderplus"):
         self.model_checkpoint = model_checkpoint
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_checkpoint)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_checkpoint, use_auth_token=True)
         if self.tokenizer.pad_token is None:
             self.tokenizer.add_special_tokens({"pad_token": "[PAD]"})
 
