@@ -54,7 +54,7 @@ def extract_text_from_file(filename):
     return text
 
 
-def get_tokens_from_file(file_path, repo_dir, tests_only=False):
+def get_tokens_from_file(file_path: Path, repo_dir: Path, tests_only:bool = False):
     """
     root_dir is generally the repository root, so that you can use the cached data
     """
@@ -65,7 +65,7 @@ def get_tokens_from_file(file_path, repo_dir, tests_only=False):
     cache = None
     if repo_dir:
         cache = TensorCache(Path("cache"), "tokens_from_file")
-        relative_file_path = file_path.replace(repo_dir, "")
+        relative_file_path = Path(str(file_path).replace(str(repo_dir), ""))
 
     if cache and cache.get_cache_data(relative_file_path):
         print(f"Cache hit for {relative_file_path}")
@@ -114,14 +114,17 @@ def get_tokens_from_directory(
     """
 
     if repo_dir:
+        if not repo_dir.is_absolute():
+            raise Exception(f"repo_dir {repo_dir} must be an absolute path")
+
         if directory.is_absolute():
             # Ensure directory is a subdirectory of repo_dir
-            if not directory.startswith(repo_dir):
+            if not str(directory).startswith(repo_dir):
                 raise Exception(
                     f"Directory {directory} is not a subdirectory of {repo_dir}"
                 )
         else:
-            if directory.startswith("~"):
+            if str(directory).startswith("~"):
                 raise Exception(
                     f"Don't use '~' in your path. Directory {directory} must be a subdirectory of {repo_dir}"
                 )
@@ -132,6 +135,9 @@ def get_tokens_from_directory(
         # Really, we should block not using the repo_dir.
         # But leaving this route open for testing
         print("No repo_dir provided. Won't be using cache")
+
+
+    print(f"Directory: {directory}. Exists: {directory.exists()}")
 
     all_tokens = defaultdict(list)
     for root, dirs, files in os.walk(directory):
@@ -150,11 +156,14 @@ def get_tokens_from_directory(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--directory", type=str, default="")
-    parser.add_argument("--repo_dir", type=str, default="~/pytorch")
+    parser.add_argument("--directory", type=Path, default="")
+    parser.add_argument("--repo_dir", type=Path, default="~/pytorch")
     parser.add_argument("--file_prefix", type=str, default="test_")
     parser.add_argument("--output_file", type=str, default=None)
     args = parser.parse_args()
-    pprint.pprint(
-        get_tokens_from_directory(args.directory, file_prefix=args.file_prefix, output_file=args.output_file)
-    )
+    tokens = get_tokens_from_directory(
+        args.directory,
+        file_prefix=args.file_prefix,
+        repo_dir=args.repo_dir,
+        output_file=args.output_file)
+    pprint.pprint(tokens)
