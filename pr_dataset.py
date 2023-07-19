@@ -32,8 +32,6 @@ class PyTorchPRDataset(Dataset):
         patch = self.pull_requests[idx]["patch"]
         pr_number = self.pull_requests[idx]["number"]
 
-        print(patch)
-
         current_file = None
         selected_lines = []
         all_tokens = defaultdict(list)
@@ -90,13 +88,8 @@ def parse_args() -> Any:
 def main() -> None:
     args = parse_args()
     data = PyTorchPRDataset(args.input, args.pr_dir)
-    count = 0
     for r in data:
         print(r)
-
-        count += 1
-        if count == 2:
-            break
 
 
 if __name__ == "__main__":
