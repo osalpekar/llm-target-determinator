@@ -1,5 +1,5 @@
 import os
-from transformers import BertTokenizer
+from transformers import BertTokenizer, AutoTokenizer
 import argparse
 from collections import defaultdict
 import ast
@@ -33,8 +33,9 @@ def get_function_text_from_file(filename: str) -> Dict[str, str]:
     return functions
 
 def extract_tokens_from_text(text):
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-    tokens = tokenizer(text, return_tensors='pt', padding=True)
+    model_type = "bigcode/starcoderplus"
+    tokenizer = AutoTokenizer.from_pretrained(model_type, use_auth_token=True)
+    tokens = tokenizer.tokenize(text, return_tensors="pt", padding=True)
     return tokens
 
 def extract_text_from_file(filename):
