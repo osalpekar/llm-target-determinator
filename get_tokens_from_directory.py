@@ -1,11 +1,11 @@
 import os
 from transformers import BertTokenizer
 import argparse
-import defaultdict
+from collections import defaultdict
 
 def extract_tokens_from_text(text):
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-    tokens = tokenizer.tokenize(text)
+    tokens = tokenizer.tokenize(text, return_tensors="pt", padding=True)
     return tokens
 
 def extract_text_from_file(filename):
@@ -15,6 +15,7 @@ def extract_text_from_file(filename):
 
 def get_tokens_from_directory(directory):
     all_tokens = defaultdict(list)
+    i = 5
     for root, dirs, files in os.walk(directory):
         for file in files:
             if file.endswith('.py'):
@@ -27,7 +28,9 @@ def get_tokens_from_directory(directory):
                 else:
                     tokens = [tokens]
                 all_tokens[file_path] = tokens
-                break
+                i -= 1
+                if i == 0:
+                    break
     return all_tokens
 
 if __name__ == '__main__':
