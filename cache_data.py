@@ -8,7 +8,7 @@ class TensorCache:
         self.namespace = namespace
 
     def get_cache_file(self, key):
-        key = key.replace("/","_") # don't let the key be a path
+        key = str(key).replace("/","_") # don't let the key look like a path, even if it was derived from one
         return self.cache_dir / f"{self.namespace}_{key}.pt"
 
     def get_cache_data(self, key):
