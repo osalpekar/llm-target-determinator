@@ -11,6 +11,7 @@ from typing import Any, Dict
 from pathlib import Path
 
 import pr_tokenization
+from get_tokens_from_directory import get_tokens_from_file
 
 text1 = "Replace me by any text you'd like."
 text2 = "Hello me by any text you'd like."
@@ -77,30 +78,47 @@ class Indexer:
 
 
 class TwoTower:
-    def __init__(self, all_data):
+    def __init__(self, tokens_file):
         self.indexer = Indexer()
-        self.indexer.index(tokens_file)
+        # self.indexer.index(tokens_file)
+        self.test_embedding = torch.load("test_embeddings_autograd.pt")
+        with open("func_index_mapping_autograd.json") as f:
+            self.mapping = json.load(f)
 
-    def predict(self, diff):
-        diff_embedding = self.indexer.get_embeddings(batched_input)
+    def predict(self, file_changed):
+        pr_tokens = get_tokens_from_file(file_changed)
+        key = list(pr_tokens.keys())[-2]
+        print(f"Using function as query: {key}")
+        pr_tokens = pr_tokens[key][0]
+        print(pr_tokens)
+        diff_embeddings = self.indexer.get_embeddings(pr_tokens)
+        dims = [i for i in range(len(diff_embeddings.shape)-1)]
+        reshape_size = diff_embeddings.shape[-1]
+        embeddings_summed = torch.sum(diff_embeddings, dim=dims).reshape(1, reshape_size)
 
         # Each row in the similarity_matrix corresponds to the per-test scores
         # for a given diff.
-        similarity_matrix = torch.matmul(diff_embedding, self.indexer.test_index.T)
+        similarity_matrix = torch.matmul(embeddings_summed, self.test_embedding.T)
+        # print(similarity_matrix)
+        sorted_indices = torch.argsort(similarity_matrix, descending=False)
+        print(sorted_indices)
+        for ind in sorted_indices[0]:
+            print(self.mapping[str(ind.item())])
 
         return similarity_matrix
 
 
 def parse_args() -> Any:
     parser = ArgumentParser("Model Trainer")
-    parser.add_argument("--code-tokens", type=str, help="JSON file w PyTorch code")
+    parser.add_argument("--code-tokens", type=str, default="", help="JSON file w PyTorch code")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    indexer = Indexer()
-    indexer.index(args.code_tokens)
+    nir_model = TwoTower(args.code_tokens)
+    # nir_model.predict("/home/osalpekar/pytorch/torch/distributed/fsdp/api.py")
+    nir_model.predict("/home/osalpekar/pytorch/torch/autograd/gradcheck.py")
 
 
 if __name__ == "__main__":
