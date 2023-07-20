@@ -25,21 +25,26 @@ class Indexer:
         self.model = AutoModelForCausalLM.from_pretrained(
             model_type,
             trust_remote_code=True
-        )
+            )#.to("cuda:0")
         self.tokenizer = pr_tokenization.PTTokenizer()
         self.test_index = None
 
         self.index_to_testfile_func = {}
 
-    def get_embeddings(self, dataset, debug=False):
-        tokenized_input = self.tokenizer.encode(dataset)
-
+    def get_embeddings(self, tokenized_input, debug=False):
         if debug:
             print(tokenized_input)
             print(self.tokenizer.decode(tokenized_input))
 
-        embedding = self.model(tokenized_input)
-        return embedding
+        tensor = torch.tensor(tokenized_input, device="cpu")
+
+        embedding = self.model(
+            tensor,
+            output_hidden_states=True
+        )
+
+        del tensor # Free CUDA memory
+        return embedding.hidden_states[-1]
 
     def index(self, tokens_file):
         """
@@ -54,8 +59,11 @@ class Indexer:
             test_file_to_content_mapping = json.load(f)
 
         for idx, filename_func in enumerate(test_file_to_content_mapping):
+            print(f"Iter: {idx}")
             embeddings = self.get_embeddings(test_file_to_content_mapping[filename_func], debug=False)
-            embeddings_summed = torch.sum(embeddings, dim=0).reshape(1, 768) # Why is summing necessary?
+            dims = [i for i in range(len(embeddings.shape)-1)]
+            reshape_size = embeddings.shape[-1]
+            embeddings_summed = torch.sum(embeddings, dim=dims).reshape(1, reshape_size) # Why is summing necessary?
             embedding_list.append(embeddings_summed)
             self.index_to_testfile_func[idx] = filename_func
 

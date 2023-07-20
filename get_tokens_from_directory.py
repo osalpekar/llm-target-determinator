@@ -210,11 +210,18 @@ if __name__ == "__main__":
     parser.add_argument("--repo_dir", type=Path, default="/home/sahanp/local/pytorch")
     parser.add_argument("--file_prefix", type=str, default="")
     parser.add_argument("--output_file", type=str, default=None)
-    parser.add_argument("--use_multiprocessing", type=bool, default=True)
+    parser.add_argument("--use_multiprocessing", type=bool, default=False)
     args = parser.parse_args()
     use_multiprocessing = args.use_multiprocessing
     if use_multiprocessing:
+<<<<<<< HEAD
         tokens = get_tokens_from_directory_with_multiprocessing(args.directory, repo_dir=args.repo_dir, tests_only=False, file_prefix=args.file_prefix, output_file=args.output_file)
     else:
         tokens = get_tokens_from_directory(args.directory, repo_dir=args.repo_dir, file_prefix=args.file_prefix, output_file=args.output_file)
     # pprint.pprint(tokens)
+=======
+        tokens = get_tokens_from_directory_with_multiprocessing(args.directory, args.repo_dir, file_prefix=args.file_prefix, output_file=args.output_file)
+    else:
+        tokens = get_tokens_from_directory(args.directory, args.repo_dir, file_prefix=args.file_prefix, output_file=args.output_file)
+    pprint.pprint(tokens)
+>>>>>>> 520e413 (indexer working)

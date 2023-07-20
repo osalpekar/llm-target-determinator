@@ -12,6 +12,7 @@ class PTTokenizer:
         self.tokenizer.pad_token = "[PAD]"
 
     def encode(self, data: Any) -> Any:
+        print(data)
         return self.tokenizer.encode(data, return_tensors="pt", padding=True)
 
     def decode(self, tokenized_data: Any) -> str:
