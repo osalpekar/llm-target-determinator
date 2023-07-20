@@ -14,14 +14,11 @@ from pathlib import Path
 import pr_tokenization
 from get_tokens_from_directory import get_tokens_from_file, get_tokens_from_directory, get_tokens_from_directory_with_multiprocessing
 
+MODEL_TYPE = "bigcode/starcoderplus"
 
 class Indexer:
-    def __init__(self):
-        model_type = "bigcode/starcoderplus"
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_type,
-            trust_remote_code=True
-            )#.to("cuda:0")
+    def __init__(self, model):
+        self.model = model
         self.tokenizer = pr_tokenization.PTTokenizer()
         self.test_index = None
 
@@ -73,8 +70,8 @@ class Indexer:
 
 
 class TwoTower:
-    def __init__(self):
-        self.indexer = Indexer()
+    def __init__(self, model):
+        self.indexer = Indexer(model)
         # self.indexer.index(tokens_file)
 
     def load_test_embeddings(self, test_embeddings_file):
@@ -121,6 +118,11 @@ def main() -> None:
     args = parse_args()
     if not args.repo_root:
         args.repo_root = str(Path.home() / "pytorch")
+
+    model = AutoModelForCausalLM.from_pretrained(
+            MODEL_TYPE,
+            trust_remote_code=True
+            )#.to("cuda:0")
 
     nir_model = TwoTower(args.code_tokens)
     nir_model.load_test_embeddings(args.test_embeddings)
