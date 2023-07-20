@@ -9,7 +9,7 @@ class PTTokenizer:
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_checkpoint, use_auth_token=True
         )
-        self.tokenizer.pad_token = "[PAD]"
+        self.tokenizer.pad_token = "<fim_pad>"
 
     def encode(self, data: Any) -> Any:
         print(data)
