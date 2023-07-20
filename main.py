@@ -130,12 +130,11 @@ if __name__ == "__main__":
 
 ## Tests Code
 # indexer = Indexer()
-# output = indexer.encode_batch([text1, text2])
+# indexer.index(args.code_tokens)
 
 # print(output.shape) # (batch_size x 768)
 # Below line will not work anymore since encode_batch now just returns
 # last_layer_states
 # print(output[2][-1].shape) # (batch_size x seq_len x 768)
 
-# indexer.index(all_data)
 # print(indexer.test_index.shape)
