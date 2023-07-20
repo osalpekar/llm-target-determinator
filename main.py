@@ -12,13 +12,7 @@ from typing import Any, Dict
 from pathlib import Path
 
 import pr_tokenization
-from get_tokens_from_directory import get_tokens_from_file
-
-text1 = "Replace me by any text you'd like."
-text2 = "Hello me by any text you'd like."
-text3 = "any text you'd like."
-text4 = "Hello me you'd like."
-all_data = [[text1, text2], [text3, text4]]
+from get_tokens_from_directory import get_tokens_from_file, get_tokens_from_directory, get_tokens_from_directory_with_multiprocessing
 
 
 class Indexer:
@@ -79,16 +73,19 @@ class Indexer:
 
 
 class TwoTower:
-    def __init__(self, tokens_file):
+    def __init__(self):
         self.indexer = Indexer()
         # self.indexer.index(tokens_file)
+
+    def load_test_embeddings(self, test_embeddings_file):
         self.test_embedding = torch.load("test_embeddings_autograd.pt")
         print(self.test_embedding.shape)
         with open("func_index_mapping_autograd.json") as f:
-            self.mapping = json.load(f)
+            self.test_func_index_to_func_name_mapping = json.load(f)
+
 
     def predict(self, file_changed):
-        pr_tokens = get_tokens_from_file(file_changed, "/home/osalpekar/pytorch")
+        pr_tokens = get_tokens_from_file(file_changed, str(Path.home() / "pytorch"))
         key = list(pr_tokens.keys())[-2]
         print(f"Using function as query: {key}")
         pr_tokens = pr_tokens[key][0]
@@ -107,7 +104,7 @@ class TwoTower:
         sorted_indices = torch.argsort(similarity_matrix, descending=False)
         print(sorted_indices)
         for ind in sorted_indices:
-            print(self.mapping[str(ind.item())])
+            print(self.test_func_index_to_func_name_mapping[str(ind.item())])
 
         return similarity_matrix
 
@@ -115,14 +112,20 @@ class TwoTower:
 def parse_args() -> Any:
     parser = ArgumentParser("Model Trainer")
     parser.add_argument("--code-tokens", type=str, default="", help="JSON file w PyTorch code")
+    parser.add_argument("--test-embeddings", type=str, default="test_embeddings_autograd.pt", help="Embeddings for test files cached by indexer")
+    parser.add_argument("--repo-root", type=str, default="", help="Root of pytorch repo")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    if not args.repo_root:
+        args.repo_root = str(Path.home() / "pytorch")
+
     nir_model = TwoTower(args.code_tokens)
+    nir_model.load_test_embeddings(args.test_embeddings)
     # nir_model.predict("/home/osalpekar/pytorch/torch/distributed/fsdp/api.py")
-    nir_model.predict("/home/osalpekar/pytorch/torch/autograd/gradcheck.py")
+    nir_model.predict(str(args.repo_root) + "/torch/autograd/gradcheck.py")
 
 
 if __name__ == "__main__":
