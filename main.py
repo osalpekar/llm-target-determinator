@@ -5,6 +5,7 @@ from argparse import ArgumentParser
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 
 from transformers import BertTokenizer, BertModel, BertConfig, AutoModelForCausalLM, AutoTokenizer
 from typing import Any, Dict
@@ -82,11 +83,12 @@ class TwoTower:
         self.indexer = Indexer()
         # self.indexer.index(tokens_file)
         self.test_embedding = torch.load("test_embeddings_autograd.pt")
+        print(self.test_embedding.shape)
         with open("func_index_mapping_autograd.json") as f:
             self.mapping = json.load(f)
 
     def predict(self, file_changed):
-        pr_tokens = get_tokens_from_file(file_changed)
+        pr_tokens = get_tokens_from_file(file_changed, "/home/osalpekar/pytorch")
         key = list(pr_tokens.keys())[-2]
         print(f"Using function as query: {key}")
         pr_tokens = pr_tokens[key][0]
@@ -94,15 +96,17 @@ class TwoTower:
         diff_embeddings = self.indexer.get_embeddings(pr_tokens)
         dims = [i for i in range(len(diff_embeddings.shape)-1)]
         reshape_size = diff_embeddings.shape[-1]
-        embeddings_summed = torch.sum(diff_embeddings, dim=dims).reshape(1, reshape_size)
+        embeddings_summed = torch.sum(diff_embeddings, dim=dims).reshape(1, reshape_size) # (1 x emmbed_dim)
 
         # Each row in the similarity_matrix corresponds to the per-test scores
         # for a given diff.
-        similarity_matrix = torch.matmul(embeddings_summed, self.test_embedding.T)
-        # print(similarity_matrix)
+
+        similarity_matrix = F.cosine_similarity(embeddings_summed, self.test_embedding)
+        # similarity_matrix = torch.matmul(embeddings_summed, self.test_embedding.T)
+        print(similarity_matrix)
         sorted_indices = torch.argsort(similarity_matrix, descending=False)
         print(sorted_indices)
-        for ind in sorted_indices[0]:
+        for ind in sorted_indices:
             print(self.mapping[str(ind.item())])
 
         return similarity_matrix
