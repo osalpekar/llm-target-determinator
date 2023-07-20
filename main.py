@@ -124,7 +124,7 @@ def main() -> None:
             trust_remote_code=True
             )#.to("cuda:0")
 
-    nir_model = TwoTower(args.code_tokens)
+    nir_model = TwoTower(args.code_tokens, model)
     nir_model.load_test_embeddings(args.test_embeddings)
     # nir_model.predict("/home/osalpekar/pytorch/torch/distributed/fsdp/api.py")
     nir_model.predict(str(args.repo_root) + "/torch/autograd/gradcheck.py")
