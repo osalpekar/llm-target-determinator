@@ -88,8 +88,8 @@ def get_tokens_from_file(file_path: Path, repo_dir: Path, tests_only: bool = Fal
         relative_file_path = Path(str(file_path).replace(str(repo_dir), ""))
 
     if cache and cache.get_cache_data(relative_file_path):
-        print(f"Cache hit for {relative_file_path}")
         cached_data = cache.get_cache_data(relative_file_path)
+        print(f"Cache hit for {relative_file_path}. Contains {len(cached_data.items())} functions")
 
         # Ugly hack to avoid having to recompute this cached data
         # Change all the keys to be relative_file_path:function_name

@@ -120,11 +120,12 @@ class Indexer:
         self.test_index = torch.cat(embedding_list, dim=0)
 
         # Save indexed data. We don't seem to actually use this though
-        curr_time = datetime.now()
-        torch.save(self.test_index, f"test_embeddings_{curr_time}.pt")
+        if False:
+            curr_time = datetime.now()
+            torch.save(self.test_index, f"test_embeddings_{curr_time}.pt")
 
-        with open(f"func_index_mapping_{curr_time}.json", "w") as f:
-            json.dump(self.index_to_testfile_func, f)
+            with open(f"func_index_mapping_{curr_time}.json", "w") as f:
+                json.dump(self.index_to_testfile_func, f)
 
 
 class TwoTower:
