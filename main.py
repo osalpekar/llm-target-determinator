@@ -61,7 +61,7 @@ class Indexer:
                 output_hidden_states=True
             )
 
-            embedding = full_model_states.hidden_states[-1]
+            embedding = full_model_states.hidden_states[-1].detach()
             if cache_key is not None:
                 cache.save_cache_data(cache_key, embedding)
 
