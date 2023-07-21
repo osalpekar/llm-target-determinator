@@ -49,13 +49,13 @@ class Indexer:
 
         tensor = torch.tensor(tokenized_input, device="cpu")
 
+        embedding = None
         if cache_key is not None:
             print(f"embedding cache key is {cache_key}")
             cache = cache_data.TensorCache(cache_dir="cache", namespace="test_embeddings")
             embedding = cache.get_cache_data(cache_key)
 
         if embedding is None:
-
             full_model_states = self.model(
                 tensor,
                 output_hidden_states=True
@@ -230,6 +230,8 @@ indexer = m.Indexer()
 nir_model = m.TwoTower(indexer)
 test_paths = list(map(lambda p: Path(p), args.test_paths.split(",")))
 indexer.index_paths(repo_dir=Path(args.repo_root), test_paths=test_paths)
+nir_model.load_test_embeddings_from_indexer(indexer)
+nir_model.predict(str(args.repo_root) + "/" + args.file_changed, args.repo_root)
 
 """
 
