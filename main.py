@@ -137,7 +137,10 @@ class TwoTower:
         self.test_embedding = torch.load("test_embeddings_autograd.pt")
         print(self.test_embedding.shape)
         with open("func_index_mapping_autograd.json") as f:
-            self.test_func_index_to_func_name_mapping = json.load(f)
+            test_func_index_to_func_name_mapping = json.load(f)
+            # convert all the keys in the json back to ints. The json save/load process converted them to string
+            for k, v in test_func_index_to_func_name_mapping.items():
+                self.test_func_index_to_func_name_mapping[int(k)] = v
 
     def load_test_embeddings_from_indexer(self, indexer : Indexer = None):
         if indexer:
@@ -167,7 +170,7 @@ class TwoTower:
         sorted_indices = torch.argsort(similarity_matrix, descending=False)
         print(sorted_indices)
         for ind in sorted_indices:
-            print(self.test_func_index_to_func_name_mapping[str(ind.item())])
+            print(self.test_func_index_to_func_name_mapping[int(ind.item())])
 
         return similarity_matrix
 
@@ -226,6 +229,7 @@ pass
 """
 import main as m
 from pathlib import Path
+from importlib import reload
 args = m.gen_args()
 indexer = m.Indexer()
 nir_model = m.TwoTower(indexer)
