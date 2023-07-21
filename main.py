@@ -49,9 +49,9 @@ class Indexer:
 
         tensor = torch.tensor(tokenized_input, device="cpu")
 
-        print(f"embedding cache key is {cache_key}")
-        cache = cache_data.TensorCache(cache_dir="cache", namespace="test_embeddings")
-        if cache_key:
+        if cache_key is not None:
+            print(f"embedding cache key is {cache_key}")
+            cache = cache_data.TensorCache(cache_dir="cache", namespace="test_embeddings")
             embedding = cache.get_cache_data(cache_key)
 
         if embedding is None:
