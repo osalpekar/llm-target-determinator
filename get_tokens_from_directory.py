@@ -89,7 +89,12 @@ def get_tokens_from_file(file_path: Path, repo_dir: Path, tests_only: bool = Fal
 
     if cache and cache.get_cache_data(relative_file_path):
         print(f"Cache hit for {relative_file_path}")
-        return cache.get_cache_data(relative_file_path)
+        cached_data = cache.get_cache_data(relative_file_path)
+
+        # Ugly hack to avoid having to recompute this cached data
+        # Change all the keys to be relative_file_path:function_name
+        cached_data = {str(relative_file_path) + ":" + key.split(":")[1]: value for key, value in cached_data.items()}
+        return cached_data
 
     functions = get_function_text_from_file(file_path, selected_lines)
     print(f"Found {len(functions.items())} functions")
@@ -111,26 +116,29 @@ def get_tokens_from_file(file_path: Path, repo_dir: Path, tests_only: bool = Fal
             tokens = torch.split(tokens, MAX_TOKENS, dim=1)
         else:
             tokens = [tokens]
-        all_file_tokens[str(file_path) + ":" + function_name] = tokens
+        all_file_tokens[str(relative_file_path) + ":" + function_name] = tokens
 
     # Save file to cache
     cache.save_cache_data(relative_file_path, all_file_tokens) if cache else None
 
     return all_file_tokens
 
+def to_json(token_dict):
+    return {key: [token.tolist() for token in tokens] for key, tokens in token_dict.items()}
+
 def write_token_dict_as_json(token_dict, filename):
-    writable_dict = {key: [token.tolist() for token in tokens] for key, tokens in token_dict.items()}
+    writable_dict = to_json(token_dict)
     with open(filename, 'w') as f:
         f.write(json.dumps(writable_dict))
 
-def get_effective_directory(repo_dir, directory):
+def get_effective_directory(repo_dir: Path, directory: Path):
     if repo_dir:
         if not repo_dir.is_absolute():
             raise Exception(f"repo_dir {repo_dir} must be an absolute path")
 
         if directory.is_absolute():
             # Ensure directory is a subdirectory of repo_dir
-            if not str(directory).startswith(repo_dir):
+            if not str(directory).startswith(str(repo_dir)):
                 raise Exception(
                     f"Directory {directory} is not a subdirectory of {repo_dir}"
                 )
@@ -178,7 +186,7 @@ def get_tokens_from_directory(
                 print(f"Done parsing {file_path}")
     if output_file:
         write_token_dict_as_json(all_tokens, output_file)
-    return all_tokens
+    return to_json(all_tokens)
 
 def process_file(file, repo_dir, tests_only):
     return get_tokens_from_file(file_path=file, repo_dir=repo_dir, tests_only=tests_only)
@@ -202,7 +210,7 @@ def get_tokens_from_directory_with_multiprocessing(directory: Path, repo_dir: Pa
     if output_file:
         # dump as json
         write_token_dict_as_json(all_tokens, output_file)
-    return all_tokens
+    return to_json(all_tokens)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
