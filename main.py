@@ -182,9 +182,9 @@ def parse_args() -> Any:
     parser.add_argument("--file-changed", type=str, default="torch/autograd/gradcheck.py", help="File to compare against")
     return parser.parse_args()
 
-def index_paths(indexer, test_paths):
+def index_paths(indexer, repo_root, test_paths):
     test_paths = list(map(lambda p: Path(p), test_paths.split(",")))
-    indexer.index_paths(repo_dir=Path(args.repo_root), test_paths=test_paths)
+    indexer.index_paths(repo_dir=Path(repo_root), test_paths=test_paths)
 
 def main() -> None:
     args = parse_args()
@@ -195,7 +195,7 @@ def main() -> None:
     nir_model = TwoTower(indexer)
 
     if args.test_paths:
-        index_paths(indexer, test_paths)
+        index_paths(indexer, args.test_paths)
         nir_model.load_test_embeddings_from_indexer(indexer)
     else:
         # Use whatever index is hard coded into the repo already.
@@ -233,7 +233,7 @@ from importlib import reload
 args = m.gen_args(test_paths="test/onnx/dynamo")
 indexer = m.Indexer()
 nir_model = m.TwoTower(indexer)
-index_paths(indexer, args.test_paths)
+m.index_paths(indexer, args.repo_root, args.test_paths)
 nir_model.load_test_embeddings_from_indexer(indexer)
 nir_model.predict(str(args.repo_root) + "/" + args.file_changed, args.repo_root)
 
