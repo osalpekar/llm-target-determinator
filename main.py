@@ -91,12 +91,11 @@ class Indexer:
         for path in test_paths:
             full_path = repo_dir / path
             assert full_path.exists(), f"{full_path} does not exist"
-
             # check if path is a file
             if full_path.is_file():
                 tokenizeds = gt.get_tokens_from_file(full_path, repo_dir=repo_dir, tests_only=True)
             else:
-                tokenizeds = gt.get_tokens_from_directory_with_multiprocessing(full_path, repo_dir=repo_dir, file_prefix="test_", tests_only=True)
+                tokenizeds = gt.get_tokens_from_directory(full_path, repo_dir=repo_dir, file_prefix="test_", tests_only=True)
             tokens_to_index.update(tokenizeds)
 
         self.index_tokens(tokens_to_index)
@@ -183,6 +182,9 @@ def parse_args() -> Any:
     parser.add_argument("--file-changed", type=str, default="torch/autograd/gradcheck.py", help="File to compare against")
     return parser.parse_args()
 
+def index_paths(indexer, test_paths):
+    test_paths = list(map(lambda p: Path(p), test_paths.split(",")))
+    indexer.index_paths(repo_dir=Path(args.repo_root), test_paths=test_paths)
 
 def main() -> None:
     args = parse_args()
@@ -193,9 +195,7 @@ def main() -> None:
     nir_model = TwoTower(indexer)
 
     if args.test_paths:
-        test_paths = list(map(lambda p: Path(p), args.test_paths.split(",")))
-        indexer.index_paths(repo_dir=Path(args.repo_root), test_paths=test_paths)
-
+        index_paths(indexer, test_paths)
         nir_model.load_test_embeddings_from_indexer(indexer)
     else:
         # Use whatever index is hard coded into the repo already.
@@ -230,11 +230,10 @@ pass
 import main as m
 from pathlib import Path
 from importlib import reload
-args = m.gen_args()
+args = m.gen_args(test_paths="test/onnx/dynamo")
 indexer = m.Indexer()
 nir_model = m.TwoTower(indexer)
-test_paths = list(map(lambda p: Path(p), args.test_paths.split(",")))
-indexer.index_paths(repo_dir=Path(args.repo_root), test_paths=test_paths)
+index_paths(indexer, args.test_paths)
 nir_model.load_test_embeddings_from_indexer(indexer)
 nir_model.predict(str(args.repo_root) + "/" + args.file_changed, args.repo_root)
 
