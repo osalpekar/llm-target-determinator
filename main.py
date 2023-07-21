@@ -62,7 +62,8 @@ class Indexer:
             )
 
             embedding = full_model_states.hidden_states[-1]
-            cache.save_cache_data(cache_key, embedding)
+            if cache_key is not None:
+                cache.save_cache_data(cache_key, embedding)
 
         del tensor # Free CUDA memory
         return embedding
