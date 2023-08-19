@@ -19,7 +19,11 @@ from typing import Optional
 MAX_TOKENS = 8292
 
 
-def get_function_text_from_file(filename: str, selected_lines: List[Tuple[int, int]] = []) -> Dict[str, str]:
+def get_function_text_from_file(
+    filename: str,
+    selected_lines: List[Tuple[int, int]] = []
+) -> Dict[str, str]:
+
     def _is_in_scope(begin_lineno, end_lineno, selected_lines) -> bool:
         if not selected_lines:
             return True
@@ -74,7 +78,12 @@ def extract_text_from_file(filename):
     return text
 
 
-def get_tokens_from_file(file_path: Path, repo_dir: Path, tests_only: bool = False, selected_lines: List[Tuple[int, int]] = []):
+def get_tokens_from_file(
+    file_path: Path,
+    repo_dir: Path,
+    tests_only: bool = False,
+    selected_lines: List[Tuple[int, int]] = []
+):
     """
     root_dir is generally the repository root, so that you can use the cached data
     """
@@ -163,13 +172,20 @@ def should_process_file(file: str, root: str, desired_file_prefix: str):
     return file.endswith(".py") and file.startswith(desired_file_prefix) and "third_party" not in root
 
 def get_tokens_from_directory(
-    directory: Path, repo_dir: Path = None, file_prefix="", tests_only=True, output_file: Optional[str] = None
+    directory: Path,
+    repo_dir: Path = None,
+    file_prefix="",
+    tests_only=True,
+    output_file: Optional[str] = None
 ):
     """
-    directory: Should be inside repo_dir if you want to use the cache (can be relative to repo_dir, e.g. repo_dir="~/pytorch", directory="test")
+    directory: Should be inside repo_dir if you want to use the cache
+               (can be relative to repo_dir,
+               e.g. repo_dir="~/pytorch", directory="test")
     repo_dir: Path to repository. Required if you want to use the cache
     file_prefix: If set, only files that start with this prefix will be parsed
-    output_file: If set, the tokens will be written to this file. If set to None (default), will not write to file
+    output_file: If set, the tokens will be written to this file. If set to
+                 None (default), will not write to file
     """
 
     directory = get_effective_directory(repo_dir, directory)
@@ -188,43 +204,17 @@ def get_tokens_from_directory(
         write_token_dict_as_json(all_tokens, output_file)
     return to_json(all_tokens)
 
-def process_file(file, repo_dir, tests_only):
-    return get_tokens_from_file(file_path=file, repo_dir=repo_dir, tests_only=tests_only)
-
-def get_tokens_from_directory_with_multiprocessing(directory: Path, repo_dir: Path = None, file_prefix="", tests_only=True, output_file: Optional[str] = None):
-    directory = get_effective_directory(repo_dir, directory)
-
-    print("Traversing files under {directory}...")
-    all_files = []
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            if should_process_file(file, root, file_prefix):
-                file_path = os.path.join(root, file)
-                all_files.append(file_path)
-    print(f"Found {len(all_files)} files to parse under {directory}.")
-    process_file_args = [(file, repo_dir, tests_only) for file in all_files]
-    pool = multiprocessing.Pool()
-    results = pool.starmap(process_file, process_file_args)
-
-    all_tokens = defaultdict(list)
-    for file_tokens in results:
-        all_tokens.update(file_tokens)
-    if output_file:
-        # dump as json
-        write_token_dict_as_json(all_tokens, output_file)
-    return to_json(all_tokens)
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--directory", type=Path, default="")
     parser.add_argument("--repo_dir", type=Path, default="/home/sahanp/local/pytorch")
     parser.add_argument("--file_prefix", type=str, default="")
     parser.add_argument("--output_file", type=str, default=None)
-    parser.add_argument("--use_multiprocessing", type=bool, default=False)
     args = parser.parse_args()
-    use_multiprocessing = args.use_multiprocessing
-    if use_multiprocessing:
-        tokens = get_tokens_from_directory_with_multiprocessing(args.directory, repo_dir=args.repo_dir, tests_only=False, file_prefix=args.file_prefix, output_file=args.output_file)
-    else:
-        tokens = get_tokens_from_directory(args.directory, repo_dir=args.repo_dir, file_prefix=args.file_prefix, output_file=args.output_file)
-    # pprint.pprint(tokens)
+
+    tokens = get_tokens_from_directory(
+        args.directory,
+        repo_dir=args.repo_dir,
+        file_prefix=args.file_prefix,
+        output_file=args.output_file
+    )
