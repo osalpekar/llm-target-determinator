@@ -1,20 +1,27 @@
 import json
-from datetime import datetime
 from argparse import ArgumentParser
+from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
+
+import cache_data
+import get_tokens_from_directory as gt
+
+import pr_tokenization
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
+import torch.optim as optim
 
-from transformers import BertTokenizer, BertModel, BertConfig, AutoModelForCausalLM, AutoTokenizer
-from typing import Any, Dict, List
-from pathlib import Path
-from collections import defaultdict
-
-import pr_tokenization
-import get_tokens_from_directory as gt
-import cache_data
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BertConfig,
+    BertModel,
+    BertTokenizer,
+)
 
 MODEL_TYPE = "bigcode/starcoderplus"
 

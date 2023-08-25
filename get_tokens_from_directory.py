@@ -1,29 +1,33 @@
 import argparse
 import ast
+import json
 import multiprocessing
 import os
-import json
 import pprint
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Tuple
+
+# from cache_data import TensorCache
+from typing import Dict, List, Optional, Tuple
 
 import pr_tokenization
 import torch
-import json
-
-# from cache_data import TensorCache
-from typing import Optional
 
 MAX_TOKENS = 8292
 
 
-def get_function_text_from_file(
-    filename: str,
-    selected_lines: List[Tuple[int, int]] = []
-) -> Dict[str, str]:
+def should_process_file(file: str, root: str, desired_file_prefix: str):
+    return (
+        file.endswith(".py")
+        and file.startswith(desired_file_prefix)
+        and "third_party" not in root
+    )
 
+
+def get_function_text_from_file(
+    filename: str, selected_lines: List[Tuple[int, int]] = []
+) -> Dict[str, str]:
     def _is_in_scope(begin_lineno, end_lineno, selected_lines) -> bool:
         if not selected_lines:
             return True
@@ -58,7 +62,9 @@ def get_function_text_from_file(
         elif isinstance(node, ast.ClassDef):
             # If the node is a class, we also want to get its methods
             for sub_node in node.body:
-                if isinstance(sub_node, ast.FunctionDef) and _is_in_scope(sub_node.lineno, sub_node.end_lineno, selected_lines):
+                if isinstance(sub_node, ast.FunctionDef) and _is_in_scope(
+                    sub_node.lineno, sub_node.end_lineno, selected_lines
+                ):
                     signature = node.name + "." + sub_node.name
                     body = ast.get_source_segment(content, sub_node)
                     functions[signature] = body
@@ -82,7 +88,7 @@ def get_tokens_from_file(
     file_path: Path,
     repo_dir: Path,
     tests_only: bool = False,
-    selected_lines: List[Tuple[int, int]] = []
+    selected_lines: List[Tuple[int, int]] = [],
 ):
     """
     root_dir is generally the repository root, so that you can use the cached data
@@ -132,13 +138,18 @@ def get_tokens_from_file(
 
     return all_file_tokens
 
+
 def to_json(token_dict):
-    return {key: [token.tolist() for token in tokens] for key, tokens in token_dict.items()}
+    return {
+        key: [token.tolist() for token in tokens] for key, tokens in token_dict.items()
+    }
+
 
 def write_token_dict_as_json(token_dict, filename):
     writable_dict = to_json(token_dict)
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         f.write(json.dumps(writable_dict))
+
 
 def get_effective_directory(repo_dir: Path, directory: Path):
     if repo_dir:
@@ -168,15 +179,13 @@ def get_effective_directory(repo_dir: Path, directory: Path):
 
     return directory
 
-def should_process_file(file: str, root: str, desired_file_prefix: str):
-    return file.endswith(".py") and file.startswith(desired_file_prefix) and "third_party" not in root
 
 def get_tokens_from_directory(
     directory: Path,
     repo_dir: Path = None,
     file_prefix="",
     tests_only=True,
-    output_file: Optional[str] = None
+    output_file: Optional[str] = None,
 ):
     """
     directory: Should be inside repo_dir if you want to use the cache
@@ -206,6 +215,7 @@ def get_tokens_from_directory(
 
     return to_json(all_tokens)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--directory", type=Path, default="")
@@ -221,5 +231,5 @@ if __name__ == "__main__":
         args.directory,
         repo_dir=args.repo_dir,
         file_prefix=args.file_prefix,
-        output_file=args.output_file
+        output_file=args.output_file,
     )
