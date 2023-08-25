@@ -5,6 +5,7 @@ import multiprocessing
 import os
 import pprint
 import re
+import time
 from collections import defaultdict
 from pathlib import Path
 
@@ -124,13 +125,14 @@ def get_tokens_from_file(
             continue
 
         print(f"Extracting tokens from {function_name}")
-        tokens = extract_tokens_from_text(text)
-        print(f"Got {tokens.shape[1]} tokens")
-        if tokens.shape[1] >= MAX_TOKENS:
-            # split tokens into chunks of MAX_TOKENS
-            tokens = torch.split(tokens, MAX_TOKENS, dim=1)
-        else:
-            tokens = [tokens]
+        # tokens = extract_tokens_from_text(text)
+        tokens = torch.tensor([1])
+        # print(f"Got {tokens.shape[1]} tokens")
+        # if tokens.shape[1] >= MAX_TOKENS:
+        #     # split tokens into chunks of MAX_TOKENS
+        #     tokens = torch.split(tokens, MAX_TOKENS, dim=1)
+        # else:
+        #     tokens = [tokens]
         all_file_tokens[str(relative_file_path) + ":" + function_name] = tokens
 
     # Save file to cache
@@ -200,20 +202,24 @@ def get_tokens_from_directory(
     directory = get_effective_directory(repo_dir, directory)
 
     all_tokens = defaultdict(list)
+    all_files = []
     for root, dirs, files in os.walk(directory):
         for file in files:
             if should_process_file(file, root, file_prefix):
                 file_path = os.path.join(root, file)
+                all_files.append(file_path)
                 file_tokens = get_tokens_from_file(
                     file_path=file_path, repo_dir=repo_dir, tests_only=tests_only
                 )
                 all_tokens.update(file_tokens)
                 print(f"Done parsing {file_path}")
+    print(all_files)
+    print(len(all_files))
 
-    if output_file:
-        write_token_dict_as_json(all_tokens, output_file)
+    # if output_file:
+        # write_token_dict_as_json(all_tokens, output_file)
 
-    return to_json(all_tokens)
+    # return to_json(all_tokens)
 
 
 if __name__ == "__main__":
@@ -227,9 +233,12 @@ if __name__ == "__main__":
     parser.add_argument("--output_file", type=str, default=None)
     args = parser.parse_args()
 
+    start = time.time()
     tokens = get_tokens_from_directory(
         args.directory,
         repo_dir=args.repo_dir,
         file_prefix=args.file_prefix,
         output_file=args.output_file,
     )
+    end = time.time()
+    print(f"Took {end-start} seconds")
