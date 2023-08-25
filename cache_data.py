@@ -2,7 +2,7 @@ from pathlib import Path
 import torch
 
 class TensorCache:
-    def __init__(self, cache_dir: Path | str, namespace: str):
+    def __init__(self, cache_dir: Path, namespace: str):
         if isinstance(cache_dir, str):
             cache_dir = Path(cache_dir)
 

@@ -13,7 +13,7 @@ import pr_tokenization
 import torch
 import json
 
-from cache_data import TensorCache
+# from cache_data import TensorCache
 from typing import Optional
 
 MAX_TOKENS = 8292
@@ -90,20 +90,20 @@ def get_tokens_from_file(
     print(f"Parsing {file_path}")
 
     all_file_tokens = defaultdict(list)
+    relative_file_path = Path(str(file_path).replace(str(repo_dir), ""))
 
-    cache = None
-    if repo_dir:
-        cache = TensorCache(Path("cache"), "tokens_from_file")
-        relative_file_path = Path(str(file_path).replace(str(repo_dir), ""))
+    # cache = None
+    # if repo_dir:
+    #     cache = TensorCache(Path("cache"), "tokens_from_file")
 
-    if cache and cache.get_cache_data(relative_file_path):
-        cached_data = cache.get_cache_data(relative_file_path)
-        print(f"Cache hit for {relative_file_path}. Contains {len(cached_data.items())} functions")
+    # if cache and cache.get_cache_data(relative_file_path):
+    #     cached_data = cache.get_cache_data(relative_file_path)
+    #     print(f"Cache hit for {relative_file_path}. Contains {len(cached_data.items())} functions")
 
-        # Ugly hack to avoid having to recompute this cached data
-        # Change all the keys to be relative_file_path:function_name
-        cached_data = {str(relative_file_path) + ":" + key.split(":")[1]: value for key, value in cached_data.items()}
-        return cached_data
+    #     # Ugly hack to avoid having to recompute this cached data
+    #     # Change all the keys to be relative_file_path:function_name
+    #     cached_data = {str(relative_file_path) + ":" + key.split(":")[1]: value for key, value in cached_data.items()}
+    #     return cached_data
 
     functions = get_function_text_from_file(file_path, selected_lines)
     print(f"Found {len(functions.items())} functions")
@@ -128,7 +128,7 @@ def get_tokens_from_file(
         all_file_tokens[str(relative_file_path) + ":" + function_name] = tokens
 
     # Save file to cache
-    cache.save_cache_data(relative_file_path, all_file_tokens) if cache else None
+    # cache.save_cache_data(relative_file_path, all_file_tokens) if cache else None
 
     return all_file_tokens
 
@@ -200,14 +200,19 @@ def get_tokens_from_directory(
                 )
                 all_tokens.update(file_tokens)
                 print(f"Done parsing {file_path}")
+
     if output_file:
         write_token_dict_as_json(all_tokens, output_file)
+
     return to_json(all_tokens)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--directory", type=Path, default="")
-    parser.add_argument("--repo_dir", type=Path, default="/home/sahanp/local/pytorch")
+    # TODO: might want to change these names
+    # repo_dir is the root directory of the project
+    # directory is the target directory you want to index
+    parser.add_argument("--repo_dir", type=Path, default="/home/osalpekar/pytorch")
     parser.add_argument("--file_prefix", type=str, default="")
     parser.add_argument("--output_file", type=str, default=None)
     args = parser.parse_args()
