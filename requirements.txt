@@ -1,3 +1,6 @@
 torch==2.0.1
 transformers
 huggingface_hub
+black==22.6.0
+ufmt==2.0.0
+usort==1.0.4
