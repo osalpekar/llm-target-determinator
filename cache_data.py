@@ -2,6 +2,7 @@ from pathlib import Path
 
 import torch
 
+
 class TensorCache:
     def __init__(self, cache_dir: Path, namespace: str):
         if isinstance(cache_dir, str):
@@ -12,7 +13,9 @@ class TensorCache:
         self.namespace = namespace
 
     def get_cache_file(self, key):
-        key = str(key).replace("/","_") # don't let the key look like a path, even if it was derived from one
+        key = str(key).replace(
+            "/", "_"
+        )  # don't let the key look like a path, even if it was derived from one
         return self.cache_dir / f"{self.namespace}_{key}.pt"
 
     def get_cache_data(self, key):

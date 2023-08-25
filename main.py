@@ -25,6 +25,7 @@ from transformers import (
 
 MODEL_TYPE = "bigcode/starcoderplus"
 
+
 class Indexer:
     def __init__(self, model_type=MODEL_TYPE):
         self.model_type = model_type
@@ -39,7 +40,9 @@ class Indexer:
         # Load the model lazily, so that bugs earlier in the code aren't blocked on model loading
         if self._model is None:
             print("Model isn't loaded yet. Loading now...")
-            self._model = AutoModelForCausalLM.from_pretrained(self.model_type, trust_remote_code=True)
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_type, trust_remote_code=True
+            )
 
         return self._model
 
@@ -59,20 +62,19 @@ class Indexer:
         embedding = None
         if cache_key is not None:
             print(f"embedding cache key is {cache_key}")
-            cache = cache_data.TensorCache(cache_dir="cache", namespace="test_embeddings")
+            cache = cache_data.TensorCache(
+                cache_dir="cache", namespace="test_embeddings"
+            )
             embedding = cache.get_cache_data(cache_key)
 
         if embedding is None:
-            full_model_states = self.model(
-                tensor,
-                output_hidden_states=True
-            )
+            full_model_states = self.model(tensor, output_hidden_states=True)
 
             embedding = full_model_states.hidden_states[-1].detach()
             if cache_key is not None:
                 cache.save_cache_data(cache_key, embedding)
 
-        del tensor # Free CUDA memory
+        del tensor  # Free CUDA memory
         return embedding
 
     def index(self, tokens_file):
@@ -100,9 +102,13 @@ class Indexer:
             assert full_path.exists(), f"{full_path} does not exist"
             # check if path is a file
             if full_path.is_file():
-                tokenizeds = gt.get_tokens_from_file(full_path, repo_dir=repo_dir, tests_only=True)
+                tokenizeds = gt.get_tokens_from_file(
+                    full_path, repo_dir=repo_dir, tests_only=True
+                )
             else:
-                tokenizeds = gt.get_tokens_from_directory(full_path, repo_dir=repo_dir, file_prefix="test_", tests_only=True)
+                tokenizeds = gt.get_tokens_from_directory(
+                    full_path, repo_dir=repo_dir, file_prefix="test_", tests_only=True
+                )
             tokens_to_index.update(tokenizeds)
 
         self.index_tokens(tokens_to_index)
@@ -117,10 +123,16 @@ class Indexer:
 
         for idx, filename_func in enumerate(test_file_to_content_mapping):
             print(f"Iter: {idx}")
-            embeddings = self.get_embeddings(test_file_to_content_mapping[filename_func], debug=False, cache_key=filename_func)
-            dims = [i for i in range(len(embeddings.shape)-1)]
+            embeddings = self.get_embeddings(
+                test_file_to_content_mapping[filename_func],
+                debug=False,
+                cache_key=filename_func,
+            )
+            dims = [i for i in range(len(embeddings.shape) - 1)]
             reshape_size = embeddings.shape[-1]
-            embeddings_summed = torch.sum(embeddings, dim=dims).reshape(1, reshape_size) # Why is summing necessary?
+            embeddings_summed = torch.sum(embeddings, dim=dims).reshape(
+                1, reshape_size
+            )  # Why is summing necessary?
             embedding_list.append(embeddings_summed)
             self.index_to_testfile_func[idx] = filename_func
 
@@ -148,7 +160,7 @@ class TwoTower:
             for k, v in test_func_index_to_func_name_mapping.items():
                 self.test_func_index_to_func_name_mapping[int(k)] = v
 
-    def load_test_embeddings_from_indexer(self, indexer : Indexer = None):
+    def load_test_embeddings_from_indexer(self, indexer: Indexer = None):
         if indexer:
             self.indexer = indexer
 
@@ -163,9 +175,11 @@ class TwoTower:
         pr_tokens = pr_tokens[key][0]
         print(pr_tokens)
         diff_embeddings = self.indexer.get_embeddings(pr_tokens)
-        dims = [i for i in range(len(diff_embeddings.shape)-1)]
+        dims = [i for i in range(len(diff_embeddings.shape) - 1)]
         reshape_size = diff_embeddings.shape[-1]
-        embeddings_summed = torch.sum(diff_embeddings, dim=dims).reshape(1, reshape_size) # (1 x emmbed_dim)
+        embeddings_summed = torch.sum(diff_embeddings, dim=dims).reshape(
+            1, reshape_size
+        )  # (1 x emmbed_dim)
 
         # Each row in the similarity_matrix corresponds to the per-test scores
         # for a given diff.
@@ -183,15 +197,34 @@ class TwoTower:
 
 def parse_args() -> Any:
     parser = ArgumentParser("Model Trainer")
-    parser.add_argument("--test-embeddings", type=str, default="test_embeddings_autograd.pt", help="Embeddings for test files cached by indexer. Either set this or test-paths")
-    parser.add_argument("--repo-root", type=str, default="", help="Root of pytorch repo")
-    parser.add_argument("--test-paths", type=str, default="", help="List of directories or paths to compare test file against (comma separated, path relative to repo root)")
-    parser.add_argument("--file-changed", type=str, default="torch/autograd/gradcheck.py", help="File to compare against")
+    parser.add_argument(
+        "--test-embeddings",
+        type=str,
+        default="test_embeddings_autograd.pt",
+        help="Embeddings for test files cached by indexer. Either set this or test-paths",
+    )
+    parser.add_argument(
+        "--repo-root", type=str, default="", help="Root of pytorch repo"
+    )
+    parser.add_argument(
+        "--test-paths",
+        type=str,
+        default="",
+        help="List of directories or paths to compare test file against (comma separated, path relative to repo root)",
+    )
+    parser.add_argument(
+        "--file-changed",
+        type=str,
+        default="torch/autograd/gradcheck.py",
+        help="File to compare against",
+    )
     return parser.parse_args()
+
 
 def index_paths(indexer, repo_root, test_paths):
     test_paths = list(map(lambda p: Path(p), test_paths.split(",")))
     indexer.index_paths(repo_dir=Path(repo_root), test_paths=test_paths)
+
 
 def main() -> None:
     args = parse_args()
@@ -206,7 +239,9 @@ def main() -> None:
         nir_model.load_test_embeddings_from_indexer(indexer)
     else:
         # Use whatever index is hard coded into the repo already.
-        nir_model.load_test_embeddings("args.test_embeddings") # Method doesn't actualy respect this param
+        nir_model.load_test_embeddings(
+            "args.test_embeddings"
+        )  # Method doesn't actualy respect this param
     # nir_model.predict("/home/osalpekar/pytorch/torch/distributed/fsdp/api.py")
 
     nir_model.predict(str(args.repo_root) + "/" + args.file_changed, args.repo_root)
@@ -216,10 +251,15 @@ if __name__ == "__main__":
     main()
 
 
-class GenericObj():
+class GenericObj:
     pass
 
-def gen_args(repo_root="", test_paths="test/autograd,test/onnx/dynamo", file_changed="torch/autograd/gradcheck.py"):
+
+def gen_args(
+    repo_root="",
+    test_paths="test/autograd,test/onnx/dynamo",
+    file_changed="torch/autograd/gradcheck.py",
+):
     """
     For having an args obj in the python repl
     """
@@ -228,6 +268,7 @@ def gen_args(repo_root="", test_paths="test/autograd,test/onnx/dynamo", file_cha
     args.test_paths = test_paths
     args.file_changed = file_changed
     return args
+
 
 pass
 
@@ -245,7 +286,6 @@ nir_model.load_test_embeddings_from_indexer(indexer)
 nir_model.predict(str(args.repo_root) + "/" + args.file_changed, args.repo_root)
 
 """
-
 
 
 ## Tests Code
