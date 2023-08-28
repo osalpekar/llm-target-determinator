@@ -217,7 +217,7 @@ def get_tokens_from_directory(
     print(len(all_files))
 
     # if output_file:
-        # write_token_dict_as_json(all_tokens, output_file)
+    # write_token_dict_as_json(all_tokens, output_file)
 
     # return to_json(all_tokens)
 

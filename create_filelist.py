@@ -10,7 +10,7 @@ import numpy as np
 # script is run once to generate the list of Python test files and write this
 # to a filelist. This filelist is read during indexing. The parsing and
 # tokenization of the functions happens in batches in the dataloader of the
-# indexer.  
+# indexer.
 
 
 def should_include_file(file: str, root: str, file_prefix: str) -> bool:
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output-file",
         type=str,
-        default="assets/filelist.json"
+        default="assets/filelist.json",
         help="Write the produced file list to the specified output file",
     )
     args = parser.parse_args()

@@ -1,11 +1,13 @@
+import ast
 import json
 import os
 import sys
-import ast
-import torch
 
-from torch.utils.data import Dataset, DataLoader
+import torch
 from pr_tokenization import PTTokenizer
+
+from torch.utils.data import DataLoader, Dataset
+
 
 class TestDataset(Dataset):
     def __init__(self, filelist):
@@ -45,7 +47,7 @@ class TestDataset(Dataset):
                         signature = node.name + "." + sub_node.name
                         body = ast.get_source_segment(content, sub_node)
                         functions[signature] = body
-        
+
         # Get tokens for each function
         token_list = []
         for signature in functions:
@@ -65,6 +67,8 @@ def collate_fn(data):
 dataset = TestDataset("assets/filelist.json")
 dataloader = DataLoader(dataset, collate_fn=collate_fn, batch_size=2)
 
+
+# Small Test
 for idx, batch in enumerate(dataloader, 0):
     if idx == 0:
         sys.exit(0)

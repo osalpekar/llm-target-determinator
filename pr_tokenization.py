@@ -12,8 +12,13 @@ class PTTokenizer:
         # self.tokenizer.pad_token = "<fim_pad>"
 
     def encode(self, data: Any) -> Any:
-        return self.tokenizer.encode(data, return_tensors="pt",
-                padding='max_length', max_length=100, truncation=True)
+        return self.tokenizer.encode(
+            data,
+            return_tensors="pt",
+            padding="max_length",
+            max_length=100,
+            truncation=True,
+        )
 
     def decode(self, tokenized_data: Any) -> str:
         return self.tokenizer.decode(tokenized_data)
