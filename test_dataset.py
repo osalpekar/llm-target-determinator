@@ -1,7 +1,10 @@
 import json
 import os
+import sys
+import ast
+import torch
 
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from pr_tokenization import PTTokenizer
 
 class TestDataset(Dataset):
@@ -10,15 +13,12 @@ class TestDataset(Dataset):
             filelist_json = json.load(f)
 
         self.filelist = filelist_json["all_files"]
-        self.tokenizer = PTTokenizer()
+        self.tokenizer = PTTokenizer("bert-base-uncased")
 
-    def __len(self):
+    def __len__(self):
         return len(self.filelist)
 
     def __getitem__(self, idx):
-        # parse ast and get functions
-        # get function text
-        # tokenize function
         filename = self.filelist[idx]
         with open(filename) as f:
             content = f.read()
@@ -27,7 +27,11 @@ class TestDataset(Dataset):
 
         functions = {}
 
-        # TODO: move this to offline
+        # It takes about 36 minutes to do the ast function parsing for the
+        # entire pytorch directory. This is likely prohibitive, so best if we
+        # do it in dataloader.
+        # By the end of this for-loop, we have a map of all functions in the
+        # file and the function bodies
         for node in ast.walk(module):
             if isinstance(node, ast.FunctionDef):
                 # If the node is a function, extract its name and its arguments
@@ -38,14 +42,29 @@ class TestDataset(Dataset):
                 # If the node is a class, we also want to get its methods
                 for sub_node in node.body:
                     if isinstance(sub_node, ast.FunctionDef):
-                        signature = nod.name + "." + sub_node.name
+                        signature = node.name + "." + sub_node.name
                         body = ast.get_source_segment(content, sub_node)
                         functions[signature] = body
         
+        # Get tokens for each function
+        token_list = []
         for signature in functions:
             function_body = functions[signature]
             tokens = self.tokenizer.encode(function_body)
+            token_list.append(tokens)
 
-        return tokens
+        # Concatenate the tokenized vectors from each function into a single
+        # matrix of shape (num_functions x embedding_dimension)
+        return torch.cat(token_list)
 
 
+def collate_fn(data):
+    return torch.cat(data)
+
+
+dataset = TestDataset("assets/filelist.json")
+dataloader = DataLoader(dataset, collate_fn=collate_fn, batch_size=2)
+
+for idx, batch in enumerate(dataloader, 0):
+    if idx == 0:
+        sys.exit(0)
