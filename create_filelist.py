@@ -59,6 +59,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output-file",
         type=str,
+        default="assets/filelist.json"
         help="Write the produced file list to the specified output file",
     )
     args = parser.parse_args()
