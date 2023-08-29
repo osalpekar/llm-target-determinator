@@ -4,7 +4,7 @@ import os
 import sys
 
 import torch
-from pr_tokenization import PTTokenizer
+from pr_tokenization import PTTokenizer, CONTEXT_LENGTH
 
 from torch.utils.data import DataLoader, Dataset
 
@@ -22,6 +22,7 @@ class TestDataset(Dataset):
 
     def __getitem__(self, idx):
         filename = self.filelist[idx]
+        print(filename)
         with open(filename) as f:
             content = f.read()
 
@@ -48,6 +49,9 @@ class TestDataset(Dataset):
                         body = ast.get_source_segment(content, sub_node)
                         functions[signature] = body
 
+        if len(functions) == 0:
+            return torch.tensor([], dtype=torch.int64).reshape(0, CONTEXT_LENGTH)
+
         # Get tokens for each function
         token_list = []
         for signature in functions:
@@ -64,11 +68,11 @@ def collate_fn(data):
     return torch.cat(data)
 
 
-dataset = TestDataset("assets/filelist.json")
-dataloader = DataLoader(dataset, collate_fn=collate_fn, batch_size=2)
+# dataset = TestDataset("assets/filelist.json")
+# dataloader = DataLoader(dataset, collate_fn=collate_fn, batch_size=2)
 
 
 # Small Test
-for idx, batch in enumerate(dataloader, 0):
-    if idx == 0:
-        sys.exit(0)
+# for idx, batch in enumerate(dataloader, 0):
+#     if idx == 0:
+#         sys.exit(0)
