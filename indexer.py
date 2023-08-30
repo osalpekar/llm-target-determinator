@@ -59,9 +59,9 @@ class Indexer:
 
     def save_index(self, embeddings, function_list):
         rand = hash(datetime.now())
-        torch.save(embeddings, f"unittest_index_{rand}.pt")
+        torch.save(embeddings, f"unittest_index_{rand}_{self.local_rank}.pt")
 
-        with open(f"unittest_index_mapping_{rand}.json") as f:
+        with open(f"unittest_index_mapping_{rand}_{self.local_rank}.json") as f:
             json.dump({"mapping": function_list}, f)
 
 
