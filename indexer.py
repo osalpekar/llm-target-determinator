@@ -47,23 +47,27 @@ class Indexer:
     def index(self):
         embeddings = []
         function_list = []
-        for idx, batch in enumerate(self.dataloader, 0):
-            inputs, functions = batch
-            inputs = inputs.to(self.device)
 
-            full_model_states = self.model(inputs, output_hidden_states=True)
-            embedding = full_model_states.hidden_states[-1].detach()
+        self.model.eval()
 
-            embedding_cpu = embedding.to("cpu")
-            embeddings.append(embedding_cpu)
-            function_list.extend(functions)
+        with torch.no_grad():
+            for idx, batch in enumerate(self.dataloader, 0):
+                inputs, functions = batch
+                inputs = inputs.to(self.device)
 
-            del embedding
-            del inputs
-            del full_model_states
+                full_model_states = self.model(inputs, output_hidden_states=True)
+                embedding = full_model_states.hidden_states[-1].detach()
 
-            # if idx == 2:
-            #     break
+                embedding_cpu = embedding.to("cpu")
+                embeddings.append(embedding_cpu)
+                function_list.extend(functions)
+
+                del embedding
+                del inputs
+                del full_model_states
+
+                # if idx == 2:
+                #     break
 
         embeddings = torch.cat(embeddings)
         # print(embeddings)
