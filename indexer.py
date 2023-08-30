@@ -3,7 +3,7 @@ import time
 
 import torch
 
-from test_dataset import collate_fn, TestDataset
+from test_dataset import collate_fn, UnittestDataset
 from torch.utils.data import DataLoader
 
 from transformers import AutoModelForCausalLM
@@ -12,7 +12,7 @@ from transformers import AutoModelForCausalLM
 class Indexer:
     def __init__(self):
         # Create DataLoader
-        dataset = TestDataset("assets/filelist.json")
+        dataset = UnittestDataset("assets/filelist.json")
         self.dataloader = DataLoader(dataset, collate_fn=collate_fn, batch_size=2)
         print("init dataloader done")
 

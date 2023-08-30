@@ -10,7 +10,7 @@ from pr_tokenization import CONTEXT_LENGTH, PTTokenizer
 from torch.utils.data import DataLoader, Dataset
 
 # TODO: Test -> Unittest
-class TestDataset(Dataset):
+class UnittestDataset(Dataset):
     def __init__(self, filelist):
         with open(filelist) as f:
             filelist_json = json.load(f)
@@ -93,7 +93,7 @@ def collate_fn(data):
 
 
 # Small Test
-# dataset = TestDataset("assets/filelist.json")
+# dataset = UnittestDataset("assets/filelist.json")
 # dataloader = DataLoader(dataset, collate_fn=collate_fn, batch_size=2)
 
 # for idx, batch in enumerate(dataloader, 0):
