@@ -41,7 +41,9 @@ class UnittestDataset(Dataset):
                 # If the node is a class, we also want to get its methods
                 for sub_node in node.body:
                     if isinstance(sub_node, ast.FunctionDef):
-                        signature = filename + ":" + node.name + "." + sub_node.name
+                        signature = (
+                            filename + ":" + node.name + "." + sub_node.name
+                        )
                         body = ast.get_source_segment(file_content, sub_node)
                         functions[signature] = body
 
@@ -73,7 +75,10 @@ class UnittestDataset(Dataset):
         # Some test files don't actually have any unittest functions. We handle
         # that case here.
         if len(functions) == 0:
-            return (torch.tensor([], dtype=torch.int64).reshape(0, CONTEXT_LENGTH), [])
+            return (
+                torch.tensor([], dtype=torch.int64).reshape(0, CONTEXT_LENGTH),
+                [],
+            )
 
         # Get tokens for each function
         tokens = self.tokenize_functions(functions)

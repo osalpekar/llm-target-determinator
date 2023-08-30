@@ -143,7 +143,8 @@ def get_tokens_from_file(
 
 def to_json(token_dict):
     return {
-        key: [token.tolist() for token in tokens] for key, tokens in token_dict.items()
+        key: [token.tolist() for token in tokens]
+        for key, tokens in token_dict.items()
     }
 
 
@@ -209,7 +210,9 @@ def get_tokens_from_directory(
                 file_path = os.path.join(root, file)
                 all_files.append(file_path)
                 file_tokens = get_tokens_from_file(
-                    file_path=file_path, repo_dir=repo_dir, tests_only=tests_only
+                    file_path=file_path,
+                    repo_dir=repo_dir,
+                    tests_only=tests_only,
                 )
                 all_tokens.update(file_tokens)
                 print(f"Done parsing {file_path}")
@@ -228,7 +231,9 @@ if __name__ == "__main__":
     # TODO: might want to change these names
     # repo_dir is the root directory of the project
     # directory is the target directory you want to index
-    parser.add_argument("--repo_dir", type=Path, default="/home/osalpekar/pytorch")
+    parser.add_argument(
+        "--repo_dir", type=Path, default="/home/osalpekar/pytorch"
+    )
     parser.add_argument("--file_prefix", type=str, default="")
     parser.add_argument("--output_file", type=str, default=None)
     args = parser.parse_args()

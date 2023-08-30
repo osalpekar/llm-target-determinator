@@ -107,7 +107,10 @@ class Indexer:
                 )
             else:
                 tokenizeds = gt.get_tokens_from_directory(
-                    full_path, repo_dir=repo_dir, file_prefix="test_", tests_only=True
+                    full_path,
+                    repo_dir=repo_dir,
+                    file_prefix="test_",
+                    tests_only=True,
                 )
             tokens_to_index.update(tokenizeds)
 
@@ -166,7 +169,9 @@ class TwoTower:
 
         self.test_embedding = self.indexer.test_index
         print(f"Test embedding shape: {self.test_embedding.shape}")
-        self.test_func_index_to_func_name_mapping = self.indexer.index_to_testfile_func
+        self.test_func_index_to_func_name_mapping = (
+            self.indexer.index_to_testfile_func
+        )
 
     def predict(self, file_changed, repo_root: Path):
         pr_tokens = gt.get_tokens_from_file(file_changed, repo_root)
@@ -184,7 +189,9 @@ class TwoTower:
         # Each row in the similarity_matrix corresponds to the per-test scores
         # for a given diff.
 
-        similarity_matrix = F.cosine_similarity(embeddings_summed, self.test_embedding)
+        similarity_matrix = F.cosine_similarity(
+            embeddings_summed, self.test_embedding
+        )
         # similarity_matrix = torch.matmul(embeddings_summed, self.test_embedding.T)
         print(similarity_matrix)
         sorted_indices = torch.argsort(similarity_matrix, descending=False)
@@ -244,7 +251,9 @@ def main() -> None:
         )  # Method doesn't actualy respect this param
     # nir_model.predict("/home/osalpekar/pytorch/torch/distributed/fsdp/api.py")
 
-    nir_model.predict(str(args.repo_root) + "/" + args.file_changed, args.repo_root)
+    nir_model.predict(
+        str(args.repo_root) + "/" + args.file_changed, args.repo_root
+    )
 
 
 if __name__ == "__main__":
@@ -264,7 +273,9 @@ def gen_args(
     For having an args obj in the python repl
     """
     args = GenericObj()
-    args.repo_root = str(Path.home() / "pytorch") if not repo_root else repo_root
+    args.repo_root = (
+        str(Path.home() / "pytorch") if not repo_root else repo_root
+    )
     args.test_paths = test_paths
     args.file_changed = file_changed
     return args

@@ -40,9 +40,9 @@ class Indexer:
         print("init dataloader done")
 
         # Load Model
-        self.model = AutoModelForCausalLM.from_pretrained("bert-base-uncased").to(
-            self.device
-        )
+        self.model = AutoModelForCausalLM.from_pretrained(
+            "bert-base-uncased"
+        ).to(self.device)
 
     def index(self):
         embeddings = []
@@ -55,7 +55,9 @@ class Indexer:
                 inputs, functions = batch
                 inputs = inputs.to(self.device)
 
-                full_model_states = self.model(inputs, output_hidden_states=True)
+                full_model_states = self.model(
+                    inputs, output_hidden_states=True
+                )
                 embedding = full_model_states.hidden_states[-1].detach()
 
                 embedding_cpu = embedding.to("cpu")
@@ -74,7 +76,9 @@ class Indexer:
 
     def save_index(self, embeddings, function_list):
         rand = hash(datetime.now()) & sys.maxsize
-        torch.save(embeddings, f"assets/unittest_index_{rand}_{self.local_rank}.pt")
+        torch.save(
+            embeddings, f"assets/unittest_index_{rand}_{self.local_rank}.pt"
+        )
 
         with open(
             f"assets/unittest_index_mapping_{rand}_{self.local_rank}.json", "w+"
