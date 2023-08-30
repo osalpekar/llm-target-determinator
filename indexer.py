@@ -70,8 +70,6 @@ class Indexer:
                 #     break
 
         embeddings = torch.cat(embeddings)
-        # print(embeddings)
-        # print(function_list)
         self.save_index(embeddings, function_list)
 
     def save_index(self, embeddings, function_list):
