@@ -1,34 +1,43 @@
+import json
 import os
+import sys
 import time
 from datetime import datetime
 
 import torch
 
 from test_dataset import collate_fn, UnittestDataset
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, DistributedSampler
 
 from transformers import AutoModelForCausalLM
 
 
 class Indexer:
     def __init__(self):
-        # Create DataLoader
-        dataset = UnittestDataset("assets/filelist.json")
-        self.dataloader = DataLoader(dataset, collate_fn=collate_fn, batch_size=2)
-        print("init dataloader done")
-
         # Init Rank/Device
         try:
-            self.local_rank = os.environ["LOCAL_RANK"]
+            self.local_rank = int(os.environ["LOCAL_RANK"])
+            self.world_size = int(os.environ["WORLD_SIZE"])
         except KeyError:
             # LOCAL_RANK may not be set if torchrun/torchx is not being used
             self.local_rank = 0
+            self.world_size = 1
 
         self.device = (
-            torch.device(f"cuda:{local_rank}")
+            torch.device(f"cuda:{self.local_rank}")
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
+
+        # Create DataLoader
+        dataset = UnittestDataset("assets/filelist.json")
+        sampler = DistributedSampler(
+            dataset, num_replicas=self.world_size, rank=self.local_rank
+        )
+        self.dataloader = DataLoader(
+            dataset, collate_fn=collate_fn, batch_size=2, sampler=sampler
+        )
+        print("init dataloader done")
 
         # Load Model
         self.model = AutoModelForCausalLM.from_pretrained("bert-base-uncased").to(
@@ -45,23 +54,29 @@ class Indexer:
             full_model_states = self.model(inputs, output_hidden_states=True)
             embedding = full_model_states.hidden_states[-1].detach()
 
-            embeddings.append(embedding)
+            embedding_cpu = embedding.to("cpu")
+            embeddings.append(embedding_cpu)
             function_list.extend(functions)
-            # embedding and functions have the same order
 
-            if idx == 2:
-                break
+            del embedding
+            del inputs
+            del full_model_states
+
+            # if idx == 2:
+            #     break
 
         embeddings = torch.cat(embeddings)
-        print(embeddings)
-        print(function_list)
+        # print(embeddings)
+        # print(function_list)
         self.save_index(embeddings, function_list)
 
     def save_index(self, embeddings, function_list):
-        rand = hash(datetime.now())
-        torch.save(embeddings, f"unittest_index_{rand}_{self.local_rank}.pt")
+        rand = hash(datetime.now()) & sys.maxsize
+        torch.save(embeddings, f"assets/unittest_index_{rand}_{self.local_rank}.pt")
 
-        with open(f"unittest_index_mapping_{rand}_{self.local_rank}.json") as f:
+        with open(
+            f"assets/unittest_index_mapping_{rand}_{self.local_rank}.json", "w+"
+        ) as f:
             json.dump({"mapping": function_list}, f)
 
 

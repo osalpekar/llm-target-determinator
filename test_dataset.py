@@ -73,7 +73,7 @@ class UnittestDataset(Dataset):
         # Some test files don't actually have any unittest functions. We handle
         # that case here.
         if len(functions) == 0:
-            return torch.tensor([], dtype=torch.int64).reshape(0, CONTEXT_LENGTH)
+            return (torch.tensor([], dtype=torch.int64).reshape(0, CONTEXT_LENGTH), [])
 
         # Get tokens for each function
         tokens = self.tokenize_functions(functions)
