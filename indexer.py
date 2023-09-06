@@ -7,9 +7,11 @@ from datetime import datetime
 import torch
 
 from test_dataset import collate_fn, UnittestDataset
+from pr_tokenization import CONTEXT_LENGTH
 from torch.utils.data import DataLoader, DistributedSampler
 
 from transformers import AutoModelForCausalLM
+from llama import Llama
 
 
 class Indexer:
@@ -28,50 +30,63 @@ class Indexer:
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
+        x = torch.rand(1)
+        print(x.device)
 
         # Create DataLoader
         dataset = UnittestDataset("assets/filelist.json")
         sampler = DistributedSampler(
-            dataset, num_replicas=self.world_size, rank=self.local_rank
+            dataset, num_replicas=self.world_size, rank=self.local_rank,
+            shuffle=False
         )
         self.dataloader = DataLoader(
-            dataset, collate_fn=collate_fn, batch_size=2, sampler=sampler
+            dataset, collate_fn=collate_fn, batch_size=2, sampler=sampler,
         )
         print("init dataloader done")
 
         # Load Model
-        self.model = AutoModelForCausalLM.from_pretrained(
-            "codellama/CodeLlama-7b-Python-hf"
-        ).to(self.device)
-        print("Loaded Model - Going to Sleep")
-        time.sleep(10)
+        # self.model = AutoModelForCausalLM.from_pretrained(
+        #     "codellama/CodeLlama-7b-Python-hf"
+        # ).to(self.device)
+        # TODO: make these cmd line args
+        self.generator = Llama.build(
+            ckpt_dir="/home/osalpekar/codellama/CodeLlama-7b-Python/",
+            tokenizer_path="/home/osalpekar/codellama/CodeLlama-7b-Python/tokenizer.model",
+            max_seq_len=CONTEXT_LENGTH,
+            max_batch_size=600,
+            model_parallel_size=1,
+        )
 
     def index(self):
         embeddings = []
         function_list = []
 
-        self.model.eval()
+        # self.model.eval()
 
         with torch.no_grad():
             for idx, batch in enumerate(self.dataloader, 0):
                 print(idx)
                 inputs, functions = batch
+                if inputs.shape[0] == 0:
+                    continue
                 inputs = inputs.to(self.device)
 
-                full_model_states = self.model(
-                    inputs, output_hidden_states=True
-                )
+                # TODO: make tokenizer handle pad_id
+                # full_model_states = self.model(
+                #     inputs, output_hidden_states=True
+                # )
+                _, embedding = self.generator.model.forward(inputs, 0, output_last_hidden_state=True)
                 del inputs
 
                 # Embedding is (num_functions x context_length x 4096)
-                embedding = full_model_states.hidden_states[-1].detach()
-                del full_model_states
+                # embedding = full_model_states.hidden_states[-1].detach()
 
                 # Pooled Embedding is (num_functions x 4096)
                 pooled_embedding = torch.sum(embedding, dim=1)
                 del embedding
 
                 embedding_cpu = pooled_embedding.to("cpu")
+                del pooled_embedding
                 embeddings.append(embedding_cpu)
                 function_list.extend(functions)
 
