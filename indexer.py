@@ -41,8 +41,10 @@ class Indexer:
 
         # Load Model
         self.model = AutoModelForCausalLM.from_pretrained(
-            "bert-base-uncased"
+            "codellama/CodeLlama-7b-Python-hf"
         ).to(self.device)
+        print("Loaded Model - Going to Sleep")
+        time.sleep(10)
 
     def index(self):
         embeddings = []
@@ -52,27 +54,33 @@ class Indexer:
 
         with torch.no_grad():
             for idx, batch in enumerate(self.dataloader, 0):
+                print(idx)
                 inputs, functions = batch
                 inputs = inputs.to(self.device)
 
                 full_model_states = self.model(
                     inputs, output_hidden_states=True
                 )
-                embedding = full_model_states.hidden_states[-1].detach()
+                del inputs
 
-                embedding_cpu = embedding.to("cpu")
+                # Embedding is (num_functions x context_length x 4096)
+                embedding = full_model_states.hidden_states[-1].detach()
+                del full_model_states
+
+                # Pooled Embedding is (num_functions x 4096)
+                pooled_embedding = torch.sum(embedding, dim=1)
+                del embedding
+
+                embedding_cpu = pooled_embedding.to("cpu")
                 embeddings.append(embedding_cpu)
                 function_list.extend(functions)
 
-                del embedding
-                del inputs
-                del full_model_states
-
-                # if idx == 2:
+                # if idx == 1:
                 #     break
 
         embeddings = torch.cat(embeddings)
-        self.save_index(embeddings, function_list)
+        print(embeddings.shape)
+        # self.save_index(embeddings, function_list)
 
     def save_index(self, embeddings, function_list):
         rand = hash(datetime.now()) & sys.maxsize

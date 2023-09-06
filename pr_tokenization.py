@@ -6,7 +6,7 @@ CONTEXT_LENGTH = 100
 
 
 class PTTokenizer:
-    def __init__(self, model_checkpoint: str = "bigcode/starcoderplus"):
+    def __init__(self, model_checkpoint: str = "codellama/CodeLlama-7b-Python-hf"):
         self.model_checkpoint = model_checkpoint
         # self.tokenizer = AutoTokenizer.from_pretrained(
         #     self.model_checkpoint, use_auth_token=True
