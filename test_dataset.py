@@ -37,6 +37,12 @@ class UnittestDataset(Dataset):
         filename = self.filelist[idx]
         print(filename)
 
+        if "pytorch/test/test_autograd.py" in filename:
+            return (
+                torch.tensor([], dtype=torch.int64).reshape(0, CONTEXT_LENGTH),
+                [],
+            )
+
         # Get functions from the file
         functions = get_functions(filename)
 
