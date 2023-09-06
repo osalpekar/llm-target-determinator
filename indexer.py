@@ -54,6 +54,7 @@ class Indexer:
             tokenizer_path="/home/osalpekar/codellama/CodeLlama-7b-Python/tokenizer.model",
             max_seq_len=CONTEXT_LENGTH,
             max_batch_size=600,
+            use_kv_cache=False,
             model_parallel_size=1,
         )
 
