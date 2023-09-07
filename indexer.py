@@ -37,7 +37,6 @@ class Indexer:
         dataset = UnittestDataset("assets/filelist.json")
         sampler = DistributedSampler(
             dataset, num_replicas=self.world_size, rank=self.local_rank,
-            shuffle=False
         )
         self.dataloader = DataLoader(
             dataset, collate_fn=collate_fn, batch_size=2, sampler=sampler,
