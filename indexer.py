@@ -50,7 +50,7 @@ class Indexer:
         #     "codellama/CodeLlama-7b-Python-hf"
         # ).to(self.device)
         # TODO: make these cmd line args
-        self.generator = Llama.build(
+        generator = Llama.build(
             ckpt_dir="/home/osalpekar/codellama/CodeLlama-7b-Python/",
             tokenizer_path="/home/osalpekar/codellama/CodeLlama-7b-Python/tokenizer.model",
             max_seq_len=CONTEXT_LENGTH,
@@ -58,6 +58,7 @@ class Indexer:
             use_kv_cache=False,
             model_parallel_size=1,
         )
+        self.model = generator.model
 
     def index(self):
         embeddings = []
@@ -77,7 +78,7 @@ class Indexer:
                 # full_model_states = self.model(
                 #     inputs, output_hidden_states=True
                 # )
-                _, embedding = self.generator.model.forward(inputs, 0, output_last_hidden_state=True)
+                _, embedding = self.model.forward(inputs, 0, output_last_hidden_state=True)
                 del inputs
 
                 # Embedding is (num_functions x context_length x 4096)
