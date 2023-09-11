@@ -3,6 +3,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from argparse import ArgumentParser
 
 import torch
 
@@ -15,7 +16,8 @@ from llama import Llama
 
 
 class Indexer:
-    def __init__(self):
+    def __init__(self, experiment_name):
+        self.experiment_name = experiment_name
         # Init Rank/Device
         try:
             self.local_rank = int(os.environ["LOCAL_RANK"])
@@ -95,24 +97,44 @@ class Indexer:
 
         embeddings = torch.cat(embeddings)
         print(embeddings.shape)
-        # self.save_index(embeddings, function_list)
+        self.save_index(embeddings, function_list)
 
     def save_index(self, embeddings, function_list):
-        rand = hash(datetime.now()) & sys.maxsize
+        assets_path = os.path.join("assets", self.experiment_name)
+
+        try:
+            os.mkdir(assets_path)
+        except FileExistsError as e:
+            pass
+
         torch.save(
-            embeddings, f"assets/unittest_index_{rand}_{self.local_rank}.pt"
+            embeddings, f"{assets_path}/unittest_index_{self.local_rank}.pt"
         )
 
         with open(
-            f"assets/unittest_index_mapping_{rand}_{self.local_rank}.json", "w+"
+            f"{assets_path}/unittest_index_mapping_{self.local_rank}.json", "w+"
         ) as f:
             json.dump({"mapping": function_list}, f)
 
+        if self.local_rank == 0:
+            print(f"Wrote Checkpoints and Test Mapping to {assets_path}")
 
-if __name__ == "__main__":
+
+def main():
+    parser = ArgumentParser("Indexer")
+    parser.add_argument(
+        "--experiment-name",
+        type=str,
+        required=True,
+        help="Name this experiment. We will store the artifacts under assets/<experiment-name>")
+    args = parser.parse_args()
+
     start = time.time()
-    indexer = Indexer()
+    indexer = Indexer(args.experiment_name)
     indexer.index()
     end = time.time()
 
     print(f"Total time to generate embeddings: {end-start} seconds")
+
+if __name__ == "__main__":
+    main()
