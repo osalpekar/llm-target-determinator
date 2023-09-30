@@ -8,8 +8,8 @@ from argparse import ArgumentParser
 import torch
 
 from test_dataset import collate_fn, UnittestDataset
-from pr_tokenization import CONTEXT_LENGTH
 from torch.utils.data import DataLoader, DistributedSampler
+from config import TDArgs
 
 from transformers import AutoModelForCausalLM
 from llama import Llama
@@ -18,6 +18,8 @@ from llama import Llama
 class Indexer:
     def __init__(self, experiment_name):
         self.experiment_name = experiment_name
+        self.config = TDArgs()
+
         # Init Rank/Device
         try:
             self.local_rank = int(os.environ["LOCAL_RANK"])
@@ -36,12 +38,12 @@ class Indexer:
         print(x.device)
 
         # Create DataLoader
-        dataset = UnittestDataset("assets/filelist.json")
+        dataset = UnittestDataset(self.config)
         sampler = DistributedSampler(
             dataset, num_replicas=self.world_size, rank=self.local_rank,
         )
         self.dataloader = DataLoader(
-            dataset, collate_fn=collate_fn, batch_size=2, sampler=sampler,
+            dataset, collate_fn=collate_fn, batch_size=1, sampler=sampler,
         )
         print("init dataloader done")
 
@@ -51,14 +53,16 @@ class Indexer:
         # ).to(self.device)
         # TODO: make these cmd line args
         generator = Llama.build(
-            ckpt_dir="/home/osalpekar/codellama/CodeLlama-7b-Python/",
-            tokenizer_path="/home/osalpekar/codellama/CodeLlama-7b-Python/tokenizer.model",
-            max_seq_len=CONTEXT_LENGTH,
-            max_batch_size=600,
+            ckpt_dir=os.path.expanduser(self.config.model_ckpt_dir),
+            tokenizer_path=os.path.expanduser(self.config.tokenizer_path),
+            max_seq_len=self.config.max_context_len,
+            max_batch_size=self.config.max_batch_size,
             use_kv_cache=False,
             model_parallel_size=1,
         )
+        generator.model = generator.model.to(self.device)
         self.model = generator.model
+        
 
     def index(self):
         embeddings = []
@@ -70,15 +74,26 @@ class Indexer:
             for idx, batch in enumerate(self.dataloader, 0):
                 print(idx)
                 inputs, functions = batch
-                if inputs.shape[0] == 0:
+
+                attn_mask = inputs["attn_mask"].to(self.device)
+                tokens = inputs["tokens"]
+
+                if tokens.shape[0] == 0:
                     continue
-                inputs = inputs.to(self.device)
+                tokens = tokens.to(self.device)
+                print(tokens.shape)
+                print(attn_mask.shape)
+                
+                # TODO: Setting to None, should be reshaped before passing in.
+                attn_mask = None
 
                 # TODO: make tokenizer handle pad_id
                 # full_model_states = self.model(
                 #     inputs, output_hidden_states=True
                 # )
-                _, embedding = self.model.forward(inputs, 0, output_last_hidden_state=True)
+                _, embedding = self.model.forward(tokens, 0, output_last_hidden_state=True, mask=attn_mask)
+                del attn_mask
+                del tokens
                 del inputs
 
                 # Embedding is (num_functions x context_length x 4096)
