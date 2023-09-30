@@ -1,39 +1,43 @@
 from typing import Any
+import os
+
+import torch
 
 from transformers import AutoTokenizer
+# TODO: import this as llamaTokenizer to prevent symbol conflicts
 from llama.tokenizer import Tokenizer
-
-CONTEXT_LENGTH = 100
 
 
 class PTTokenizer:
     def __init__(
             self,
-            model_checkpoint: str = "codellama",
-            tokenizer_path: str = ""
+            config,
         ):
-        self.model_checkpoint = model_checkpoint 
-        if self.model_checkpoint != "codellama":
-            self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
-            # self.tokenizer.pad_token = "<fim_pad>"
+        self.config = config
+
+        if self.config.model == "codellama":
+            self.tokenizer = Tokenizer(os.path.expanduser(self.config.tokenizer_path))
+            self.pad_id = self.tokenizer.eos_id
         else:
-            self.tokenizer = Tokenizer(tokenizer_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.config.model)
+            self.tokenizer.pad_token = "<fim_pad>"
+            self.pad_id = self.tokenizer.pad_token
 
     def encode(self, data: Any) -> Any:
-        if self.model_checkpoint != "codellama":
-            return self.tokenizer.encode(
-                data,
-                return_tensors="pt",
-                padding="max_length",
-                max_length=CONTEXT_LENGTH,
-                truncation=True,
-            )
-        else:
+        if self.config.model == "codellama":
             return self.tokenizer.encode(
                 data,
                 bos=True,
                 eos=False,
             ) 
+        else:
+            return self.tokenizer.encode(
+                data,
+                return_tensors="pt",
+                padding="max_length",
+                max_length=self.config.max_context_len,
+                truncation=True,
+            )
 
     def decode(self, tokenized_data: Any) -> str:
         return self.tokenizer.decode(tokenized_data)
