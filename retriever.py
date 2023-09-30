@@ -8,14 +8,16 @@ from glob import glob
 from argparse import ArgumentParser
 
 from preproc import get_functions
-from pr_tokenization import PTTokenizer, CONTEXT_LENGTH
+from pr_tokenization import PTTokenizer
 from transformers import AutoModelForCausalLM
+from config import TDArgs
 
 from llama import Llama
 
 class Retriever:
     def __init__(self, experiment_name):
         self.experiment_name = experiment_name
+        self.config = TDArgs()
         assets_path = os.path.join("assets", self.experiment_name) 
 
         # Get the list of artifacts:
@@ -48,26 +50,36 @@ class Retriever:
         #     "bert-base-uncased"
         # ).to("cuda:0")
         generator = Llama.build(
-            ckpt_dir="/home/osalpekar/codellama/CodeLlama-7b-Python/",
-            tokenizer_path="/home/osalpekar/codellama/CodeLlama-7b-Python/tokenizer.model",
-            max_seq_len=CONTEXT_LENGTH,
-            max_batch_size=600,
+            ckpt_dir=os.path.expanduser(self.config.model_ckpt_dir),
+            tokenizer_path=os.path.expanduser(self.config.tokenizer_path),
+            max_seq_len=self.config.max_context_len,
+            max_batch_size=self.config.max_batch_size,
             use_kv_cache=False,
             model_parallel_size=1,
         )
         self.model = generator.model
-        self.tokenizer = PTTokenizer()
+        self.tokenizer = PTTokenizer(self.config)
 
     def retrieve(self):
         # parse and tokenize input (function from a file)
         # run model forward on each chunk of the embeddings
         # cosine similarity per chunk
         # rank and print most/least match
+        tensor = torch.full((1, self.config.max_context_len),
+                self.tokenizer.pad_id,
+                dtype=torch.long)
+
         functions = get_functions("/home/osalpekar/pytorch/torch/distributed/fsdp/fully_sharded_data_parallel.py")
         for signature in functions:
+            # Just doing a sample function with the __init__ here
             if "__init__" in signature:
                 function_body = functions[signature]
-                tokens = self.tokenizer.encode(function_body).to("cuda:0")
+                print(signature)
+                tokens = self.tokenizer.encode(function_body)#.to("cuda:0")
+                tokens = tokens[ : self.config.max_context_len]
+                tensor[0, : len(tokens)] = torch.tensor(tokens, dtype=torch.long)
+
+        tensor = tensor.to("cuda:0")
 
         self.model.eval()
         with torch.no_grad():
@@ -76,17 +88,28 @@ class Retriever:
             # )
             # test_embedding = full_model_states.hidden_states[-1].detach()
 
-            _, func_embedding = self.model(tokens, output_hidden_states=True)
+            _, func_embedding = self.model.forward(tensor, 0, output_last_hidden_state=True)
+            pooled_embedding = torch.sum(func_embedding, dim=1)
 
             similarity_matrix = F.cosine_similarity(
-                self.embeddings, func_embedding
+                self.embeddings, pooled_embedding
             )
-            print(similarity_matrix)
+            # Largest scores are last!
             sorted_indices = torch.argsort(similarity_matrix, descending=False)
-            print(sorted_indices)
-            for ind in sorted_indices:
-                print(ind)
-                print(self.unittest_names[int(ind.item())])
+
+            print("Top 10 Most Relevant Tests")
+            top_indices = sorted_indices[-10:]
+            for ind in top_indices:
+                test = self.unittest_names[int(ind.item())]
+                score = similarity_matrix[ind]
+                print(f"Score: {score}; Test: {test}")
+
+            print("Top 10 Least Relevant Tests")
+            bot_indices = sorted_indices[:10]
+            for ind in bot_indices:
+                test = self.unittest_names[int(ind.item())]
+                score = similarity_matrix[ind]
+                print(f"Score: {score}; Test: {test}")
 
 
 def main():
