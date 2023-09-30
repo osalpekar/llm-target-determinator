@@ -1,22 +1,25 @@
-from typing import Any
 import os
+from typing import Any
 
 import torch
 
-from transformers import AutoTokenizer
 # TODO: import this as llamaTokenizer to prevent symbol conflicts
 from llama.tokenizer import Tokenizer
+
+from transformers import AutoTokenizer
 
 
 class PTTokenizer:
     def __init__(
-            self,
-            config,
-        ):
+        self,
+        config,
+    ):
         self.config = config
 
         if self.config.model == "codellama":
-            self.tokenizer = Tokenizer(os.path.expanduser(self.config.tokenizer_path))
+            self.tokenizer = Tokenizer(
+                os.path.expanduser(self.config.tokenizer_path)
+            )
             self.pad_id = self.tokenizer.eos_id
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(self.config.model)
@@ -29,7 +32,7 @@ class PTTokenizer:
                 data,
                 bos=True,
                 eos=False,
-            ) 
+            )
         else:
             return self.tokenizer.encode(
                 data,

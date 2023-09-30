@@ -41,13 +41,13 @@ class UnittestDataset(Dataset):
             tensor = torch.full(
                 (num_functions, self.config.max_context_len),
                 self.tokenizer.pad_id,
-                dtype=torch.long
+                dtype=torch.long,
             )
             print(f"pad: {self.tokenizer.pad_id}")
-            
+
             for k, t in enumerate(token_list):
                 # truncate token list to max context length
-                t = t[ : self.config.max_context_len]
+                t = t[: self.config.max_context_len]
                 # insert the tokens into the empty tensor
                 tensor[k, : len(t)] = torch.tensor(t, dtype=torch.long)
 
@@ -62,7 +62,9 @@ class UnittestDataset(Dataset):
         print(filename)
 
         if "pytorch/test/test_autograd.py" in filename:
-            empty_tensor = torch.tensor([], dtype=torch.int64).reshape(0, self.config.max_context_len)
+            empty_tensor = torch.tensor([], dtype=torch.int64).reshape(
+                0, self.config.max_context_len
+            )
             return ({"tokens": empty_tensor, "attn_mask": empty_tensor}, [])
 
         # Get functions from the file
@@ -71,7 +73,9 @@ class UnittestDataset(Dataset):
         # Some test files don't actually have any unittest functions. We handle
         # that case here.
         if len(functions) == 0:
-            empty_tensor = torch.tensor([], dtype=torch.int64).reshape(0, self.config.max_context_len)
+            empty_tensor = torch.tensor([], dtype=torch.int64).reshape(
+                0, self.config.max_context_len
+            )
             return ({"tokens": empty_tensor, "attn_mask": empty_tensor}, [])
 
         # Get tokens for each function
@@ -89,7 +93,10 @@ def collate_fn(data):
     examples_tokens = [item[0]["tokens"] for item in data]
     examples_masks = [item[0]["attn_mask"] for item in data]
     funclist = flatten([item[1] for item in data])
-    examples = {"tokens": torch.cat(examples_tokens), "attn_mask": torch.cat(examples_masks)}
+    examples = {
+        "tokens": torch.cat(examples_tokens),
+        "attn_mask": torch.cat(examples_masks),
+    }
     return examples, funclist
 
 

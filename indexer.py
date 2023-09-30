@@ -2,17 +2,17 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
 from argparse import ArgumentParser
+from datetime import datetime
 
 import torch
+from config import TDArgs
+from llama import Llama
 
 from test_dataset import collate_fn, UnittestDataset
 from torch.utils.data import DataLoader, DistributedSampler
-from config import TDArgs
 
 from transformers import AutoModelForCausalLM
-from llama import Llama
 
 
 class Indexer:
@@ -40,10 +40,15 @@ class Indexer:
         # Create DataLoader
         dataset = UnittestDataset(self.config)
         sampler = DistributedSampler(
-            dataset, num_replicas=self.world_size, rank=self.local_rank,
+            dataset,
+            num_replicas=self.world_size,
+            rank=self.local_rank,
         )
         self.dataloader = DataLoader(
-            dataset, collate_fn=collate_fn, batch_size=1, sampler=sampler,
+            dataset,
+            collate_fn=collate_fn,
+            batch_size=1,
+            sampler=sampler,
         )
         print("init dataloader done")
 
@@ -62,7 +67,6 @@ class Indexer:
         )
         generator.model = generator.model.to(self.device)
         self.model = generator.model
-        
 
     def index(self):
         embeddings = []
@@ -83,7 +87,7 @@ class Indexer:
                 tokens = tokens.to(self.device)
                 print(tokens.shape)
                 print(attn_mask.shape)
-                
+
                 # TODO: Setting to None, should be reshaped before passing in.
                 attn_mask = None
 
@@ -91,7 +95,9 @@ class Indexer:
                 # full_model_states = self.model(
                 #     inputs, output_hidden_states=True
                 # )
-                _, embedding = self.model.forward(tokens, 0, output_last_hidden_state=True, mask=attn_mask)
+                _, embedding = self.model.forward(
+                    tokens, 0, output_last_hidden_state=True, mask=attn_mask
+                )
                 del attn_mask
                 del tokens
                 del inputs
@@ -142,7 +148,8 @@ def main():
         "--experiment-name",
         type=str,
         required=True,
-        help="Name this experiment. We will store the artifacts under assets/<experiment-name>")
+        help="Name this experiment. We will store the artifacts under assets/<experiment-name>",
+    )
     args = parser.parse_args()
 
     start = time.time()
@@ -151,6 +158,7 @@ def main():
     end = time.time()
 
     print(f"Total time to generate embeddings: {end-start} seconds")
+
 
 if __name__ == "__main__":
     main()

@@ -25,6 +25,7 @@ class PythonVisitor(ast.NodeVisitor):
                 body = ast.get_source_segment(self.source_code, sub_node)
                 self.functions[signature] = body
 
+
 def get_functions(filename):
     # It takes about 36 minutes to do the ast function parsing for the
     # entire pytorch directory. This is likely prohibitive, so best if we
