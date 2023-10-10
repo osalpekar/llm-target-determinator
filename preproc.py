@@ -25,7 +25,7 @@ class PythonVisitor(ast.NodeVisitor):
         # check blocklist to not index specified functions
         if node.name in IGNORE_FUNCTIONS:
             return
-        
+
         # Python Dunder functions are never unittests
         if node.name.startswith("__") and node.name.endswith("__"):
             return
@@ -50,7 +50,9 @@ class PythonVisitor(ast.NodeVisitor):
                     return
 
                 # Python Dunder functions are never unittests
-                if sub_node.name.startswith("__") and sub_node.name.endswith("__"):
+                if sub_node.name.startswith("__") and sub_node.name.endswith(
+                    "__"
+                ):
                     return
 
                 # Check if there are any decorators.
@@ -86,6 +88,7 @@ def get_functions(filename):
     visitor.visit(tree)
 
     return visitor.functions
+
 
 # funcs = get_functions("/home/osalpekar/pytorch/torch/distributed/utils.py")
 # for func in funcs.keys():
