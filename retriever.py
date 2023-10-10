@@ -74,6 +74,7 @@ class Retriever:
 
         functions = get_functions(
             "/home/osalpekar/pytorch/torch/distributed/fsdp/fully_sharded_data_parallel.py"
+            # "/home/osalpekar/pytorch/torch/fx/node.py"
         )
         for signature in functions:
             # Just doing a sample function with the __init__ here
@@ -114,7 +115,7 @@ class Retriever:
                 print(f"Score: {score}; Test: {test}")
 
             print("Top 10 Least Relevant Tests")
-            bot_indices = sorted_indices[:10]
+            bot_indices = sorted_indices[:100]
             for ind in bot_indices:
                 test = self.unittest_names[int(ind.item())]
                 score = similarity_matrix[ind]
