@@ -1,6 +1,18 @@
 import ast
 from collections import OrderedDict
 
+IGNORE_FUNCTIONS = [
+    "__init__",
+    "setUp",
+    "tearDown",
+    "__len__",
+    "__getitem__",
+    "__iter__",
+    "__enter__",
+    "__exit__",
+    "run_tests",
+]
+
 
 class PythonVisitor(ast.NodeVisitor):
     def __init__(self, filename, source):
@@ -10,6 +22,22 @@ class PythonVisitor(ast.NodeVisitor):
         self.functions = OrderedDict()
 
     def visit_FunctionDef(self, node):
+        # check blocklist to not index specified functions
+        if node.name in IGNORE_FUNCTIONS:
+            return
+        
+        # Python Dunder functions are never unittests
+        if node.name.startswith("__") and node.name.endswith("__"):
+            return
+
+        # Check if there are any decorators.
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Name):
+                # We do not want to index functions that are marked with
+                # @property
+                if decorator.id == "overload":
+                    return
+
         signature = self.filename + ":" + node.name
         body = ast.get_source_segment(self.source_code, node)
         self.functions[signature] = body
@@ -17,8 +45,22 @@ class PythonVisitor(ast.NodeVisitor):
     def visit_ClassDef(self, node):
         for sub_node in node.body:
             if isinstance(sub_node, ast.FunctionDef):
-                # TODO: add a blocklist to not index functions like __init__,
-                # setUp, and tearDown
+                # check blocklist to not index specified functions
+                if sub_node.name in IGNORE_FUNCTIONS:
+                    return
+
+                # Python Dunder functions are never unittests
+                if sub_node.name.startswith("__") and sub_node.name.endswith("__"):
+                    return
+
+                # Check if there are any decorators.
+                for decorator in sub_node.decorator_list:
+                    if isinstance(decorator, ast.Name):
+                        # We do not want to index functions that are marked with
+                        # @property
+                        if decorator.id == "overload":
+                            return
+
                 signature = (
                     self.filename + ":" + node.name + "." + sub_node.name
                 )
@@ -44,3 +86,7 @@ def get_functions(filename):
     visitor.visit(tree)
 
     return visitor.functions
+
+# funcs = get_functions("/home/osalpekar/pytorch/torch/distributed/utils.py")
+# for func in funcs.keys():
+#     print(func)
