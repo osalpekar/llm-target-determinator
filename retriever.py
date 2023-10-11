@@ -73,7 +73,8 @@ class Retriever:
         )
 
         functions = get_functions(
-            "/home/osalpekar/pytorch/torch/distributed/fsdp/fully_sharded_data_parallel.py"
+            "/home/osalpekar/pytorch/torch/distributed/fsdp/fully_sharded_data_parallel.py",
+            indexing=False,
             # "/home/osalpekar/pytorch/torch/fx/node.py"
         )
         for signature in functions:
@@ -108,7 +109,7 @@ class Retriever:
             sorted_indices = torch.argsort(similarity_matrix, descending=False)
 
             print("Top 10 Most Relevant Tests")
-            top_indices = sorted_indices[-10:]
+            top_indices = sorted_indices[-100:]
             for ind in top_indices:
                 test = self.unittest_names[int(ind.item())]
                 score = similarity_matrix[ind]
