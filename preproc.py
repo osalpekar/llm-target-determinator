@@ -109,9 +109,3 @@ def get_functions(filename, indexing=True):
     visitor.visit(tree)
 
     return visitor.functions
-
-
-# funcs = get_functions("/home/osalpekar/pytorch/torch/distributed/utils.py")
-# funcs = get_functions("/home/osalpekar/pytorch/test/distributed/fsdp/test_fsdp_hybrid_shard.py")
-# for func in funcs.keys():
-#     print(func)
