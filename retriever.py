@@ -109,18 +109,19 @@ class Retriever:
             sorted_indices = torch.argsort(similarity_matrix, descending=False)
 
             print("Top 10 Most Relevant Tests")
-            top_indices = sorted_indices[-100:]
+            top_indices = sorted_indices[-10:]
             for ind in top_indices:
                 test = self.unittest_names[int(ind.item())]
                 score = similarity_matrix[ind]
                 print(f"Score: {score}; Test: {test}")
 
-            print("Top 10 Least Relevant Tests")
-            bot_indices = sorted_indices[:100]
+            print("Filtered Least Relevant Tests")
+            bot_indices = sorted_indices[:1000]
             for ind in bot_indices:
                 test = self.unittest_names[int(ind.item())]
                 score = similarity_matrix[ind]
-                print(f"Score: {score}; Test: {test}")
+                if "test" in test.split(":")[-1].lower():
+                    print(f"Score: {score}; Test: {test}")
 
 
 def main():
