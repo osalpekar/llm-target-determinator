@@ -26,7 +26,7 @@ def should_include_file(file: str, root: str, file_prefix: str) -> bool:
     )
 
 
-def create_filelist(project_dir: str, file_prefix: str) -> Dist[str, List[str]]:
+def create_filelist(project_dir: str, file_prefix: str) -> dict[str, list[str]]:
     """
     Returns the list of files of interest in the specified subdirectory.
     """
