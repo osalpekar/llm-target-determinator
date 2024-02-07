@@ -1,11 +1,14 @@
 import argparse
 import json
 import os
+from typing import Dict, List
 
 from pathlib import Path
 
+
 import numpy as np
 
+REPO_ROOT = Path(__file__).resolve().parent
 # This program is the only offline component in the indexing pipeline. This
 # script is run once to generate the list of Python test files and write this
 # to a filelist. This filelist is read during indexing. The parsing and
@@ -26,7 +29,7 @@ def should_include_file(file: str, root: str, file_prefix: str) -> bool:
     )
 
 
-def create_filelist(project_dir: str, file_prefix: str) -> Dist[str, List[str]]:
+def create_filelist(project_dir: str, file_prefix: str) -> Dict[str, List[str]]:
     """
     Returns the list of files of interest in the specified subdirectory.
     """
@@ -47,7 +50,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--project-dir",
         type=str,
-        default="~/pytorch",
+        default=str(REPO_ROOT.parent / "pytorch"),
         help="Root Directory of the project for which we will generate the file list",
     )
     parser.add_argument(
