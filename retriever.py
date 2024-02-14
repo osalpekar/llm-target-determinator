@@ -9,9 +9,9 @@ import torch.nn.functional as F
 from config import TDArgs
 
 from llama import Llama
-from tokenizer import Tokenizer
 
 from preproc import get_functions
+from tokenizer import Tokenizer
 from transformers import AutoModelForCausalLM
 
 

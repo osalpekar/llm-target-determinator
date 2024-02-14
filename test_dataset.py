@@ -6,14 +6,14 @@ from collections import OrderedDict
 from pathlib import Path
 
 import torch
-from tokenizer import Tokenizer
 from preproc import get_functions
+from tokenizer import Tokenizer
 
 from torch.utils.data import DataLoader, Dataset
 
 REPO_ROOT = Path(__file__).resolve().parent
 
-# TODO: Test -> Unittest
+
 class UnittestDataset(Dataset):
     def __init__(self, config):
         self.config = config
