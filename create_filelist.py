@@ -1,10 +1,9 @@
 import argparse
 import json
 import os
-from typing import Dict, List
 
 from pathlib import Path
-
+from typing import Dict, List
 
 import numpy as np
 

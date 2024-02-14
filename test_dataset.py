@@ -3,6 +3,7 @@ import json
 import os
 import sys
 from collections import OrderedDict
+from pathlib import Path
 
 import torch
 from pr_tokenization import PTTokenizer
@@ -10,16 +11,45 @@ from preproc import get_functions
 
 from torch.utils.data import DataLoader, Dataset
 
+REPO_ROOT = Path(__file__).resolve().parent
+
 # TODO: Test -> Unittest
 class UnittestDataset(Dataset):
     def __init__(self, config):
         self.config = config
 
-        with open(self.config.filelist) as f:
-            filelist_json = json.load(f)
-
-        self.filelist = filelist_json["all_files"]
+        self.filelist = self.create_filelist()
         self.tokenizer = PTTokenizer(self.config)
+
+    def create_filelist(self):
+        """
+        Returns the list of files of interest in the specified subdirectory.
+        We sort the generated list so that each rank deterministically ends up
+        with the same filelist, which ensures the Dataloder and
+        DistributedSampler correctly cover all the relevant files.
+        """
+        all_files = []
+        project_dir = Path(self.config.project_dir).expanduser()
+
+        for root, dirs, files in os.walk(self.config.project_dir):
+            for file in files:
+                if self.should_include_file(file, root):
+                    file_path = os.path.join(root, file)
+                    all_files.append(file_path)
+
+        return sorted(all_files)
+
+    def should_include_file(self, file, root):
+        """
+        Returns whether the specified file should be included in the file list.
+        Note that we are only interested in Python files with the specified prefix,
+        provided those files do not lie in certain directories like third_party.
+        """
+        return (
+            file.endswith(".py")
+            and file.startswith(self.config.file_prefix)
+            and "third_party" not in root
+        )
 
     def __len__(self):
         return len(self.filelist)
