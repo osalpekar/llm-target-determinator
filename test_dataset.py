@@ -6,7 +6,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 import torch
-from pr_tokenization import PTTokenizer
+from tokenizer import Tokenizer
 from preproc import get_functions
 
 from torch.utils.data import DataLoader, Dataset
@@ -19,7 +19,7 @@ class UnittestDataset(Dataset):
         self.config = config
 
         self.filelist = self.create_filelist()
-        self.tokenizer = PTTokenizer(self.config)
+        self.tokenizer = Tokenizer(self.config)
 
     def create_filelist(self):
         """

@@ -3,13 +3,12 @@ from typing import Any
 
 import torch
 
-# TODO: import this as llamaTokenizer to prevent symbol conflicts
-from llama.tokenizer import Tokenizer
+from llama.tokenizer import Tokenizer as LlamaTokenizer
 
 from transformers import AutoTokenizer
 
 
-class PTTokenizer:
+class Tokenizer:
     def __init__(
         self,
         config,
@@ -17,7 +16,7 @@ class PTTokenizer:
         self.config = config
 
         if self.config.model == "codellama":
-            self.tokenizer = Tokenizer(
+            self.tokenizer = LlamaTokenizer(
                 os.path.expanduser(self.config.tokenizer_path)
             )
             self.pad_id = self.tokenizer.eos_id

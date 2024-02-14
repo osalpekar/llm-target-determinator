@@ -56,7 +56,6 @@ class Indexer:
         # self.model = AutoModelForCausalLM.from_pretrained(
         #     "codellama/CodeLlama-7b-Python-hf"
         # ).to(self.device)
-        # TODO: make these cmd line args
         generator = Llama.build(
             ckpt_dir=os.path.expanduser(self.config.model_ckpt_dir),
             tokenizer_path=os.path.expanduser(self.config.tokenizer_path),

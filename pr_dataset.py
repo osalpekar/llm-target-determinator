@@ -9,7 +9,7 @@ from typing import Any
 
 from get_tokens_from_directory import get_tokens_from_file, should_process_file
 
-from pr_tokenization import PTTokenizer
+from tokenizer import Tokenizer
 
 from torch.utils.data import Dataset
 
@@ -20,7 +20,7 @@ LINENO_REGEX = re.compile(r"@@ -(?P<begin>\d+),\d+ \+(?P<end>\d+),\d+ @@")
 
 class PyTorchPRDataset(Dataset):
     def __init__(self, pull_requests_file: str, pull_requests_dir: str):
-        self.tokenizer = PTTokenizer()
+        self.tokenizer = Tokenizer()
 
         with open(pull_requests_file) as f:
             self.pull_requests = json.load(f)

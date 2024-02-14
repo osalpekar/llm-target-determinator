@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from config import TDArgs
 
 from llama import Llama
-from pr_tokenization import PTTokenizer
+from tokenizer import Tokenizer
 
 from preproc import get_functions
 from transformers import AutoModelForCausalLM
@@ -46,7 +46,7 @@ class Retriever:
         self.embeddings = torch.cat(embeddings).to("cuda:0")
         print(self.embeddings.shape)
 
-        # self.tokenizer = PTTokenizer("bert-base-uncased")
+        # self.tokenizer = Tokenizer("bert-base-uncased")
         # self.model = AutoModelForCausalLM.from_pretrained(
         #     "bert-base-uncased"
         # ).to("cuda:0")
@@ -59,7 +59,7 @@ class Retriever:
             model_parallel_size=1,
         )
         self.model = generator.model
-        self.tokenizer = PTTokenizer(self.config)
+        self.tokenizer = Tokenizer(self.config)
 
     def retrieve(self):
         # parse and tokenize input (function from a file)
