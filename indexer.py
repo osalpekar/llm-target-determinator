@@ -117,7 +117,7 @@ class Indexer:
                 #     break
 
         embeddings = torch.cat(embeddings)
-        print(embeddings.shape)
+        print(f"Rank {self.local_rank} generated embeddings of size {embeddings.shape}")
         self.save_index(embeddings, function_list)
 
     def save_index(self, embeddings, function_list):
