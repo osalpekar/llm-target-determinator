@@ -5,17 +5,14 @@ import sys
 from collections import OrderedDict
 from pathlib import Path
 import math
+from typing import Dict, Tuple, List
 
 import torch
 from preproc import get_functions
 from tokenizer import Tokenizer
-
 from torch.utils.data import DataLoader, Dataset
 
 REPO_ROOT = Path(__file__).resolve().parent
-
-from typing import Dict, Tuple, List
-from torch.utils.data import DataLoader, Dataset
 
 
 class UnittestDataset(Dataset):
