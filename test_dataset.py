@@ -14,10 +14,22 @@ from torch.utils.data import DataLoader, Dataset
 
 REPO_ROOT = Path(__file__).resolve().parent
 
+# The size of inputs to the model for inference is variable. Naively, it's
+# shape is (num_functions_in_file x context_length). Different files have
+# different numbers of functions, and a number of files have hundreds or
+# thousands of functions. Memory utilization (size of intermediate activations,
+# size of batch, etc.) is therefore correlated with the input size. Since we
+# may run this model on lower-memory GPUs such as 24GB A10G's, we ensure we can
+# still complete indexing by partitioning files up-front and then indexing the
+# partitioned files, which has lower memory utilization.
 
 class FilePartition(NamedTuple):
-    # A specific partition of the file.  partition_id is 1-indexed and should be
-    # >0, <=num_partitions
+    """
+    Stores metadata about a partition of a file.
+    partition_id is 1-indexed, must be 0 < partition_id <= num_partitions
+
+    Un-partitioned files have partition_id = num_partitions = 1
+    """
     filename: str
     partition_id: int
     num_partitions: int
