@@ -5,7 +5,7 @@ import sys
 from collections import OrderedDict
 from pathlib import Path
 import math
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, NamedTuple
 
 import torch
 from preproc import get_functions
@@ -15,6 +15,14 @@ from torch.utils.data import DataLoader, Dataset
 REPO_ROOT = Path(__file__).resolve().parent
 
 
+class FilePartition(NamedTuple):
+    # A specific partition of the file.  partition_id is 1-indexed and should be
+    # >0, <=num_partitions
+    filename: str
+    partition_id: int
+    num_partitions: int
+
+
 class UnittestDataset(Dataset):
     def __init__(self, config):
         self.config = config
@@ -22,12 +30,12 @@ class UnittestDataset(Dataset):
         self.filelist = self.create_filelist()
         self.tokenizer = Tokenizer(self.config)
 
-        self.partitions = flatten(
+        self.file_partitions: List[FilePartition] = flatten(
             [self.partition_file(file) for file in self.filelist]
         )
         # Store results from the ast parser in an attempt to reduce number of
         # times a file is parsed
-        self.functions = {}
+        self.functions_cache = {}
 
     def create_filelist(self):
         """
@@ -60,7 +68,7 @@ class UnittestDataset(Dataset):
         )
 
     def __len__(self):
-        return len(self.partitions)
+        return len(self.file_partitions)
 
     def tokenize_functions(self, functions):
         token_list = []
@@ -95,32 +103,35 @@ class UnittestDataset(Dataset):
         else:
             return torch.cat(token_list)
 
-    def partition_file(self, filename):
+    def partition_file(self, filename) -> List[FilePartition]:
         threshold = 100
-        # Is this stupid? yes
         # Approximate number of functions in file by counting number of
         # functions defs.  Partition file based on this number.  Each partition
         # should have <100 functions.
         partitions = []
         with open(filename) as f:
             text = f.read()
-        occurances = text.count("def ")
-        if occurances and occurances > threshold:
-            num_partitions = math.ceil(occurances / threshold)
+        occurrences = text.count("def ")
+        if occurrences and occurrences > threshold:
+            num_partitions = math.ceil(occurrences / threshold)
             for i in range(num_partitions):
-                partitions.append((filename, i + 1, num_partitions))
+                partitions.append(
+                    FilePartition(filename, i + 1, num_partitions)
+                )
         else:
-            partitions.append((filename, 1, 1))
+            partitions.append(FilePartition(filename, 1, 1))
         return partitions
 
     def __getitem__(self, idx):
-        filename, partition, num_partitions = self.partitions[idx]
+        filename, partition, num_partitions = self.file_partitions[idx]
 
-        if filename in self.functions:
-            functions_in_file = self.functions[filename]
+        # Use function info from a previous parsing of the ast in cache if
+        # possible
+        if filename in self.functions_cache:
+            functions_in_file = self.functions_cache[filename]
         else:
             functions_in_file = sorted(get_functions(filename).items())
-            self.functions[filename] = functions_in_file
+            self.functions_cache[filename] = functions_in_file
 
         num_functions = len(functions_in_file)
         size = math.ceil(num_functions / num_partitions)
