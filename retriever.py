@@ -67,7 +67,7 @@ class Retriever:
         self.model = generator.model
         self.tokenizer = Tokenizer(self.config)
 
-    def retrieve(self):
+    def retrieve(self, item):
         # parse and tokenize input (function from a file)
         # run model forward on each chunk of the embeddings
         # cosine similarity per chunk
@@ -78,21 +78,11 @@ class Retriever:
             dtype=torch.long,
         )
 
-        functions = get_functions(
-            "/home/osalpekar/pytorch/torch/distributed/fsdp/fully_sharded_data_parallel.py",
-            indexing=False,
-            # "/home/osalpekar/pytorch/torch/fx/node.py"
+        tokens = self.tokenizer.encode(item)
+        tokens = tokens[: self.config.max_context_len]
+        tensor[0, : len(tokens)] = torch.tensor(
+            tokens, dtype=torch.long
         )
-        for signature in functions:
-            # Just doing a sample function with the __init__ here
-            if "__init__" in signature:
-                function_body = functions[signature]
-                print(signature)
-                tokens = self.tokenizer.encode(function_body)  # .to("cuda:0")
-                tokens = tokens[: self.config.max_context_len]
-                tensor[0, : len(tokens)] = torch.tensor(
-                    tokens, dtype=torch.long
-                )
 
         tensor = tensor.to(self.device)
 
@@ -141,6 +131,8 @@ def main():
     args = parser.parse_args()
 
     start = time.time()
+    # TODO: this  won't work  - figure out how to pass something from the job
+    # to this as input
     retriever = Retriever(args.experiment_name)
     retriever.retrieve()
     end = time.time()
