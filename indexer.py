@@ -9,16 +9,21 @@ import torch
 from config import TDArgs
 from llama import Llama
 
-from test_dataset import collate_fn, UnittestDataset
+from test_dataset import (
+    collate_fn,
+    FileGranularityDataset,
+    FunctionGranularityDataset,
+)
 from torch.utils.data import DataLoader, DistributedSampler
 
 from transformers import AutoModelForCausalLM
 
 
 class Indexer:
-    def __init__(self, experiment_name):
+    def __init__(self, experiment_name, file: bool = False):
         self.experiment_name = experiment_name
         self.config = TDArgs()
+        self.file_granularity = file
 
         # Init Rank/Device
         try:
@@ -38,7 +43,10 @@ class Indexer:
         print(x.device)
 
         # Create DataLoader
-        dataset = UnittestDataset(self.config)
+        if file:
+            dataset = FileGranularityDataset(self.config)
+        else:
+            dataset = FunctionGranularityDataset(self.config)
         sampler = DistributedSampler(
             dataset,
             num_replicas=self.world_size,
@@ -149,10 +157,17 @@ def main():
         required=True,
         help="Name this experiment. We will store the artifacts under assets/<experiment-name>",
     )
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--function", action="store_true", help="Index at function granularity"
+    )
+    group.add_argument(
+        "--file", action="store_true", help="Index at file granularity"
+    )
     args = parser.parse_args()
 
     start = time.time()
-    indexer = Indexer(args.experiment_name)
+    indexer = Indexer(args.experiment_name, file=args.file)
     indexer.index()
     end = time.time()
 
