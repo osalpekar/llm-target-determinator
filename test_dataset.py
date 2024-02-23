@@ -75,7 +75,7 @@ class UnittestDataset(Dataset):
         )
 
     def __len__(self):
-        return len(self.filelist)
+        pass
 
     def tokenize_items(self, items: List[Tuple[str, str]]):
         token_list = []
@@ -113,6 +113,11 @@ class UnittestDataset(Dataset):
 
 
 class FunctionGranularityDataset(UnittestDataset):
+    """
+    Dataset where a function from a file is a signular item.  Each function gets
+    its own tokenization and embedding.
+    """
+
     def __init__(self, config):
         super().__init__(config)
         self.file_partitions: List[FilePartition] = flatten(
@@ -175,27 +180,16 @@ class FunctionGranularityDataset(UnittestDataset):
 
 
 class FileGranularityDataset(UnittestDataset):
+    """
+    Dataset where the entire file is the item.  An entire file gets tokenized
+    and embedded together.
+    """
+
     def __init__(self, config):
         super().__init__(config)
 
-    def partition_file(self, filename) -> List[FilePartition]:
-        threshold = 100
-        # Approximate number of functions in file by counting number of
-        # functions defs.  Partition file based on this number.  Each partition
-        # should have <100 functions.
-        partitions = []
-        with open(filename) as f:
-            text = f.read()
-        occurrences = text.count("def ")
-        if occurrences and occurrences > threshold:
-            num_partitions = math.ceil(occurrences / threshold)
-            for i in range(num_partitions):
-                partitions.append(
-                    FilePartition(filename, i + 1, num_partitions)
-                )
-        else:
-            partitions.append(FilePartition(filename, 1, 1))
-        return partitions
+    def __len__(self):
+        return len(self.filelist)
 
     def __getitem__(self, idx):
         filename = self.filelist[idx]

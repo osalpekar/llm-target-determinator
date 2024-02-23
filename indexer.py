@@ -18,12 +18,18 @@ from torch.utils.data import DataLoader, DistributedSampler
 
 from transformers import AutoModelForCausalLM
 
+GRANULARITIES = {
+    "FILE": FileGranularityDataset,
+    "FUNCTION": FunctionGranularityDataset,
+}
+
 
 class Indexer:
-    def __init__(self, experiment_name, file: bool = False):
+    def __init__(self, experiment_name, granularity: str):
+        assert granularity in GRANULARITIES
+
         self.experiment_name = experiment_name
         self.config = TDArgs()
-        self.file_granularity = file
 
         # Init Rank/Device
         try:
@@ -43,10 +49,7 @@ class Indexer:
         print(x.device)
 
         # Create DataLoader
-        if file:
-            dataset = FileGranularityDataset(self.config)
-        else:
-            dataset = FunctionGranularityDataset(self.config)
+        dataset = GRANULARITIES[granularity](self.config)
         sampler = DistributedSampler(
             dataset,
             num_replicas=self.world_size,
@@ -125,7 +128,9 @@ class Indexer:
                 #     break
 
         embeddings = torch.cat(embeddings)
-        print(f"Rank {self.local_rank} generated embeddings of size {embeddings.shape}")
+        print(
+            f"Rank {self.local_rank} generated embeddings of size {embeddings.shape}"
+        )
         self.save_index(embeddings, function_list)
 
     def save_index(self, embeddings, function_list):
@@ -157,17 +162,16 @@ def main():
         required=True,
         help="Name this experiment. We will store the artifacts under assets/<experiment-name>",
     )
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "--function", action="store_true", help="Index at function granularity"
-    )
-    group.add_argument(
-        "--file", action="store_true", help="Index at file granularity"
+    parser.add_argument(
+        "--granularity",
+        type=str,
+        required=True,
+        choices=GRANULARITIES.keys(),
     )
     args = parser.parse_args()
 
     start = time.time()
-    indexer = Indexer(args.experiment_name, file=args.file)
+    indexer = Indexer(args.experiment_name, granularity=args.granularity)
     indexer.index()
     end = time.time()
 
