@@ -18,6 +18,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 
 from transformers import AutoModelForCausalLM
 
+# Maps embedding granularity options to the correct dataset classes
 GRANULARITIES = {
     "FILE": FileGranularityDataset,
     "FUNCTION": FunctionGranularityDataset,
@@ -25,8 +26,8 @@ GRANULARITIES = {
 
 
 class Indexer:
-    def __init__(self, experiment_name, granularity: str):
-        assert granularity in GRANULARITIES
+    def __init__(self, experiment_name, embedding_granularity: str):
+        assert embedding_granularity in GRANULARITIES
 
         self.experiment_name = experiment_name
         self.config = TDArgs()
@@ -49,7 +50,7 @@ class Indexer:
         print(x.device)
 
         # Create DataLoader
-        dataset = GRANULARITIES[granularity](self.config)
+        dataset = GRANULARITIES[embedding_granularity](self.config)
         sampler = DistributedSampler(
             dataset,
             num_replicas=self.world_size,
@@ -171,7 +172,9 @@ def main():
     args = parser.parse_args()
 
     start = time.time()
-    indexer = Indexer(args.experiment_name, granularity=args.granularity)
+    indexer = Indexer(
+        args.experiment_name, embedding_granularity=args.granularity
+    )
     indexer.index()
     end = time.time()
 
