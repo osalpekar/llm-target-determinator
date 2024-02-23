@@ -9,14 +9,26 @@ import torch
 from config import TDArgs
 from llama import Llama
 
-from test_dataset import collate_fn, UnittestDataset
+from test_dataset import (
+    collate_fn,
+    FileGranularityDataset,
+    FunctionGranularityDataset,
+)
 from torch.utils.data import DataLoader, DistributedSampler
 
 from transformers import AutoModelForCausalLM
 
+# Maps embedding granularity options to the correct dataset classes
+GRANULARITIES = {
+    "FILE": FileGranularityDataset,
+    "FUNCTION": FunctionGranularityDataset,
+}
+
 
 class Indexer:
-    def __init__(self, experiment_name):
+    def __init__(self, experiment_name, embedding_granularity: str):
+        assert embedding_granularity in GRANULARITIES
+
         self.experiment_name = experiment_name
         self.config = TDArgs()
 
@@ -38,7 +50,7 @@ class Indexer:
         print(x.device)
 
         # Create DataLoader
-        dataset = UnittestDataset(self.config)
+        dataset = GRANULARITIES[embedding_granularity](self.config)
         sampler = DistributedSampler(
             dataset,
             num_replicas=self.world_size,
@@ -117,7 +129,9 @@ class Indexer:
                 #     break
 
         embeddings = torch.cat(embeddings)
-        print(f"Rank {self.local_rank} generated embeddings of size {embeddings.shape}")
+        print(
+            f"Rank {self.local_rank} generated embeddings of size {embeddings.shape}"
+        )
         self.save_index(embeddings, function_list)
 
     def save_index(self, embeddings, function_list):
@@ -149,10 +163,18 @@ def main():
         required=True,
         help="Name this experiment. We will store the artifacts under assets/<experiment-name>",
     )
+    parser.add_argument(
+        "--granularity",
+        type=str,
+        required=True,
+        choices=GRANULARITIES.keys(),
+    )
     args = parser.parse_args()
 
     start = time.time()
-    indexer = Indexer(args.experiment_name)
+    indexer = Indexer(
+        args.experiment_name, embedding_granularity=args.granularity
+    )
     indexer.index()
     end = time.time()
 

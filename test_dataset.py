@@ -6,6 +6,7 @@ from collections import OrderedDict
 from pathlib import Path
 import math
 from typing import Dict, Tuple, List, NamedTuple
+import math
 
 import torch
 from preproc import get_functions
@@ -23,6 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parent
 # still complete indexing by partitioning files up-front and then indexing the
 # partitioned files, which has lower memory utilization.
 
+
 class FilePartition(NamedTuple):
     """
     Stores metadata about a partition of a file.
@@ -30,6 +32,7 @@ class FilePartition(NamedTuple):
 
     Un-partitioned files have partition_id = num_partitions = 1
     """
+
     filename: str
     partition_id: int
     num_partitions: int
@@ -38,16 +41,8 @@ class FilePartition(NamedTuple):
 class UnittestDataset(Dataset):
     def __init__(self, config):
         self.config = config
-
         self.filelist = self.create_filelist()
         self.tokenizer = Tokenizer(self.config)
-
-        self.file_partitions: List[FilePartition] = flatten(
-            [self.partition_file(file) for file in self.filelist]
-        )
-        # Store results from the ast parser in an attempt to reduce number of
-        # times a file is parsed
-        self.functions_cache = {}
 
     def create_filelist(self):
         """
@@ -80,24 +75,25 @@ class UnittestDataset(Dataset):
         )
 
     def __len__(self):
-        return len(self.file_partitions)
+        pass
 
-    def tokenize_functions(self, functions):
+    def tokenize_items(self, items: List[Tuple[str, str]]):
         token_list = []
-        for signature in functions:
-            function_body = functions[signature]
-            tokens = self.tokenizer.encode(function_body)
+        names = []
+        for name, item in items:
+            tokens = self.tokenizer.encode(item)
             token_list.append(tokens)
+            names.append(name)
 
-        # Concatenate the tokenized vectors from each function into a single
-        # matrix of shape (num_functions x embedding_dimension)
+        # Concatenate the tokenized vectors from each item into a single
+        # matrix of shape (num_items x embedding_dimension)
         if self.config.model == "codellama":
-            num_functions = len(token_list)
+            num_items = len(token_list)
 
-            # Create a tensor of shape (num_functions x CONTEXT_LENGTH) filled
+            # Create a tensor of shape (num_items x CONTEXT_LENGTH) filled
             # with pad_id
             tensor = torch.full(
-                (num_functions, self.config.max_context_len),
+                (num_items, self.config.max_context_len),
                 self.tokenizer.pad_id,
                 dtype=torch.long,
             )
@@ -111,9 +107,26 @@ class UnittestDataset(Dataset):
 
             attn_mask = torch.where(tensor == self.tokenizer.pad_id, 0.0, 1.0)
 
-            return {"tokens": tensor, "attn_mask": attn_mask}
+            return {"tokens": tensor, "attn_mask": attn_mask}, names
         else:
-            return torch.cat(token_list)
+            return torch.cat(token_list), names
+
+
+class FunctionGranularityDataset(UnittestDataset):
+    """
+    Dataset where a function from a file is a signular item.  Each function gets
+    its own tokenization and embedding.
+    """
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.file_partitions: List[FilePartition] = flatten(
+            [self.partition_file(file) for file in self.filelist]
+        )
+
+        # Store results from the ast parser in an attempt to reduce number of
+        # times a file is parsed
+        self.functions_cache = {}
 
     def partition_file(self, filename) -> List[FilePartition]:
         threshold = 100
@@ -134,6 +147,9 @@ class UnittestDataset(Dataset):
             partitions.append(FilePartition(filename, 1, 1))
         return partitions
 
+    def __len__(self):
+        return len(self.file_partitions)
+
     def __getitem__(self, idx):
         filename, partition, num_partitions = self.file_partitions[idx]
 
@@ -150,7 +166,6 @@ class UnittestDataset(Dataset):
         start_i = size * (partition - 1)
         end_i = start_i + size
         functions = functions_in_file[start_i:end_i]
-        functions = {x: y for x, y in functions}
 
         # Some test files don't actually have any unittest functions. We handle
         # that case here.
@@ -161,10 +176,27 @@ class UnittestDataset(Dataset):
             return ({"tokens": empty_tensor, "attn_mask": empty_tensor}, [])
 
         # Get tokens for each function
-        tokens = self.tokenize_functions(functions)
-        function_list = list(functions.keys())
+        return self.tokenize_items(functions)
 
-        return tokens, function_list
+
+class FileGranularityDataset(UnittestDataset):
+    """
+    Dataset where the entire file is the item.  An entire file gets tokenized
+    and embedded together.
+    """
+
+    def __init__(self, config):
+        super().__init__(config)
+
+    def __len__(self):
+        return len(self.filelist)
+
+    def __getitem__(self, idx):
+        filename = self.filelist[idx]
+        with open(filename) as f:
+            text = f.read()
+
+        return self.tokenize_items([(filename, text)])
 
 
 def flatten(lst):
