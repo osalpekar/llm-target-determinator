@@ -100,14 +100,13 @@ class Indexer:
                 print(attn_mask.shape)
 
                 # TODO: Setting to None, should be reshaped before passing in.
-                attn_mask = None
 
                 # TODO: make tokenizer handle pad_id
                 # full_model_states = self.model(
                 #     inputs, output_hidden_states=True
                 # )
                 _, embedding = self.model.forward(
-                    tokens, 0, output_last_hidden_state=True
+                    tokens, 0, output_last_hidden_state=True, attn_mask=attn_mask
                 )
                 del attn_mask
                 del tokens

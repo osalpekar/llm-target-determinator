@@ -21,6 +21,15 @@ class Retriever:
         self.config = TDArgs()
         assets_path = os.path.join("assets", self.experiment_name)
 
+        # Init Rank/Device
+        try:
+            self.local_rank = int(os.environ["LOCAL_RANK"])
+            self.world_size = int(os.environ["WORLD_SIZE"])
+        except KeyError:
+            # LOCAL_RANK may not be set if torchrun/torchx is not being used
+            self.local_rank = 0
+            self.world_size = 1
+
         self.device = (
             torch.device(f"cuda:{self.local_rank}")
             if torch.cuda.is_available()
@@ -93,8 +102,10 @@ class Retriever:
                 tensor[0, : len(tokens)] = torch.tensor(
                     tokens, dtype=torch.long
                 )
+                attn_mask = torch.where(tensor == self.tokenizer.pad_id, 0.0, 1.0)
 
         tensor = tensor.to(self.device)
+        attn_mask = attn_mask.to(self.device)
 
         self.model.eval()
         with torch.no_grad():
@@ -104,7 +115,7 @@ class Retriever:
             # test_embedding = full_model_states.hidden_states[-1].detach()
 
             _, func_embedding = self.model.forward(
-                tensor, 0, output_last_hidden_state=True
+                tensor, 0, output_last_hidden_state=True, attn_mask=attn_mask
             )
             pooled_embedding = torch.sum(func_embedding, dim=1)
 
