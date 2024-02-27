@@ -88,7 +88,7 @@ class Retriever:
         # parse and tokenize input (function from a file)
         # run model forward on each chunk of the embeddings
         # cosine similarity per chunk
-        # Returns a dictionary mapping test name to a value
+        # Returns a dictionary mapping test name to a score
         self.model.eval()
         with torch.autocast(
             self.device
