@@ -113,7 +113,7 @@ class Retriever:
                     attn_mask = attn_mask.to(self.device)
 
                     _, embedding = self.model.forward(
-                        tensor, 0, output_last_hidden_state=True  # , attn_mask=attn_mask
+                        tensor, 0, output_last_hidden_state=True, attn_mask=attn_mask
                     )
                     pooled_embedding = torch.sum(embedding, dim=1)
                     similarity_matrix = F.cosine_similarity(self.embeddings, pooled_embedding)
