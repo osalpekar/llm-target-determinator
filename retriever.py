@@ -2,21 +2,21 @@ import json
 import os
 import time
 from argparse import ArgumentParser
+from collections import defaultdict
 from glob import glob
 from pathlib import Path
-from typing import Dict, List, Any
-from collections import defaultdict
+from typing import Any, Dict, List
 
 import torch
 import torch.nn.functional as F
 from config import TDArgs
+from gen_pr_items import PR_ITEMS
 
 from llama import Llama
 
 from preproc import get_functions
 from tokenizer import Tokenizer
 from transformers import AutoModelForCausalLM
-from gen_pr_items import PR_ITEMS
 
 REPO_ROOT = Path(__file__).resolve().parent
 

@@ -106,7 +106,10 @@ class Indexer:
                 #     inputs, output_hidden_states=True
                 # )
                 _, embedding = self.model.forward(
-                    tokens, 0, output_last_hidden_state=True, attn_mask=attn_mask
+                    tokens,
+                    0,
+                    output_last_hidden_state=True,
+                    attn_mask=attn_mask,
                 )
                 del attn_mask
                 del tokens

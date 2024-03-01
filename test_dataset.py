@@ -1,12 +1,11 @@
 import ast
 import json
+import math
 import os
 import sys
 from collections import OrderedDict
 from pathlib import Path
-import math
-from typing import Dict, Tuple, List, NamedTuple
-import math
+from typing import Dict, List, NamedTuple, Tuple
 
 import torch
 from preproc import get_functions
