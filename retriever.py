@@ -32,6 +32,9 @@ class Retriever:
         self.config = TDArgs()
         assets_path = os.path.join("assets", self.experiment_name)
         self.items = PR_ITEMS[pr_parse_format]()
+        self.output_filename = (
+            f"{self.experiment_name}-{pr_parse_format.lower()}-output.json"
+        )
 
         # Init Rank/Device
         try:
@@ -84,7 +87,7 @@ class Retriever:
         self.model = generator.model.to(self.device)
         self.tokenizer = Tokenizer(self.config)
 
-    def retrieve(self, filename: str) -> Dict[str, float]:
+    def retrieve(self) -> Dict[str, float]:
         # parse and tokenize input (function from a file)
         # run model forward on each chunk of the embeddings
         # cosine similarity per chunk
@@ -107,16 +110,23 @@ class Retriever:
                     tensor[0, : len(tokens)] = torch.tensor(
                         tokens, dtype=torch.long
                     )
-                    attn_mask = torch.where(tensor == self.tokenizer.pad_id, 0.0, 1.0)
+                    attn_mask = torch.where(
+                        tensor == self.tokenizer.pad_id, 0.0, 1.0
+                    )
 
                     tensor = tensor.to(self.device)
                     attn_mask = attn_mask.to(self.device)
 
                     _, embedding = self.model.forward(
-                        tensor, 0, output_last_hidden_state=True, attn_mask=attn_mask
+                        tensor,
+                        0,
+                        output_last_hidden_state=True,
+                        attn_mask=attn_mask,
                     )
                     pooled_embedding = torch.sum(embedding, dim=1)
-                    similarity_matrix = F.cosine_similarity(self.embeddings, pooled_embedding)
+                    similarity_matrix = F.cosine_similarity(
+                        self.embeddings, pooled_embedding
+                    )
 
                     grouped_by_file = defaultdict(list)
 
@@ -130,18 +140,22 @@ class Retriever:
                 # condense
                 for test, score in mapping.items():
                     mapping[test] = sum(score) / len(score)
-                self.save_outputs(filename, mapping)
+                self.save_outputs(mapping)
 
-    def save_outputs(self, filename, mapping):
+    def save_outputs(self, mapping):
         """Make json file of the mapping in assets/mappings"""
         os.makedirs("assets/mappings", exist_ok=True)
         new_mapping = {}
         for file, score in mapping.items():
-            clean_file = os.path.relpath(file, REPO_ROOT.parent / "pytorch/test")
+            clean_file = os.path.relpath(
+                file, REPO_ROOT.parent / "pytorch/test"
+            )
             new_mapping[clean_file] = score
-        with open(REPO_ROOT / "assets/mappings" / filename, "w") as f:
+        with open(
+            REPO_ROOT / "assets/mappings" / self.output_filename, "w"
+        ) as f:
             f.write(json.dumps(new_mapping))
-            print(f"Made output file assets/mappings/{filename}")
+            print(f"Made output file assets/mappings/{self.output_filename}")
 
 
 def main():
@@ -159,18 +173,12 @@ def main():
         required=True,
         help="Specify what method to parse information from a PR",
     )
-    parser.add_argument(
-        "--filename",
-        type=str,
-        required=True,
-        help="Output filename"
-    )
 
     args = parser.parse_args()
 
     start = time.time()
     retriever = Retriever(args.experiment_name, args.pr_parse_format)
-    retriever.retrieve(args.filename)
+    retriever.retrieve()
     end = time.time()
 
     print(f"Total time to retreieve: {end-start} seconds")
