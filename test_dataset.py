@@ -1,16 +1,12 @@
-import ast
-import json
 import math
 import os
-import sys
-from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Tuple
+from typing import List, NamedTuple, Tuple
 
 import torch
 from preproc import get_functions
 from tokenizer import Tokenizer
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 
 REPO_ROOT = Path(__file__).resolve().parent
 
@@ -51,7 +47,6 @@ class UnittestDataset(Dataset):
         DistributedSampler correctly cover all the relevant files.
         """
         all_files = []
-        project_dir = Path(self.config.project_dir).expanduser()
 
         for root, dirs, files in os.walk(self.config.project_dir):
             for file in files:
@@ -194,8 +189,11 @@ class FileGranularityDataset(UnittestDataset):
         filename = self.filelist[idx]
         with open(filename) as f:
             text = f.read()
+        clean_path = os.path.relpath(
+            filename, REPO_ROOT.parent / "pytorch/test"
+        )
 
-        return self.tokenize_items([(filename, text)])
+        return self.tokenize_items([(clean_path, text)])
 
 
 def flatten(lst):

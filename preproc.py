@@ -1,6 +1,10 @@
 import ast
 from collections import OrderedDict
+import os
 
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent
 IGNORE_FUNCTIONS = [
     "__init__",
     "setUp",
@@ -47,7 +51,11 @@ class PythonVisitor(ast.NodeVisitor):
                     if decorator.id in IGNORE_DECORATORS:
                         return
 
-        signature = self.filename + ":" + node.name
+        signature = (
+            os.path.relpath(self.filename, REPO_ROOT.parent / "pytorch/test")
+            + ":"
+            + node.name
+        )
         body = ast.get_source_segment(self.source_code, node)
         self.functions[signature] = body
 
@@ -70,16 +78,18 @@ class PythonVisitor(ast.NodeVisitor):
                     # Check if there are any decorators.
                     for decorator in sub_node.decorator_list:
                         if isinstance(decorator, ast.Name):
-                            # We do not want to index functions that are marked with
-                            # @property
+                            # We do not want to index functions that are marked
+                            # with @property
                             if decorator.id in IGNORE_DECORATORS:
                                 ignoreable_decorator_found = True
 
                     if ignoreable_decorator_found:
                         continue
-
+                clean_filename = os.path.relpath(
+                    self.filename, REPO_ROOT.parent / "pytorch/test"
+                )
                 signature = (
-                    self.filename + ":" + node.name + "." + sub_node.name
+                    clean_filename + ":" + node.name + "." + sub_node.name
                 )
                 body = ast.get_source_segment(self.source_code, sub_node)
                 self.functions[signature] = body
@@ -101,8 +111,6 @@ def get_functions(filename, indexing=True):
         # TODO: filelist can just have relative paths and we can call
         # expanduser here just before opening the file
         file_content = f.read()
-
-    functions = OrderedDict()
 
     visitor = PythonVisitor(filename, file_content, indexing)
     tree = ast.parse(file_content)
