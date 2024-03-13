@@ -1,9 +1,7 @@
 import json
 import os
-import sys
 import time
 from argparse import ArgumentParser
-from datetime import datetime
 
 import torch
 from config import TDArgs
@@ -46,8 +44,7 @@ class Indexer:
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        x = torch.rand(1)
-        print(x.device)
+        print(self.device)
 
         # Create DataLoader
         dataset = GRANULARITIES[embedding_granularity](self.config)
@@ -141,7 +138,7 @@ class Indexer:
 
         try:
             os.mkdir(assets_path)
-        except FileExistsError as e:
+        except FileExistsError:
             pass
 
         torch.save(

@@ -2,10 +2,8 @@ import json
 import os
 import time
 from argparse import ArgumentParser
-from collections import defaultdict
 from glob import glob
 from pathlib import Path
-from typing import Any, Dict, List
 
 import torch
 import torch.nn.functional as F
@@ -14,9 +12,7 @@ from gen_pr_items import PR_ITEMS
 
 from llama import Llama
 
-from preproc import get_functions
 from tokenizer import Tokenizer
-from transformers import AutoModelForCausalLM
 
 REPO_ROOT = Path(__file__).resolve().parent
 
@@ -87,7 +83,7 @@ class Retriever:
         self.model = generator.model.to(self.device)
         self.tokenizer = Tokenizer(self.config)
 
-    def retrieve(self) -> Dict[str, float]:
+    def retrieve(self) -> None:
         # parse and tokenize input (function from a file)
         # run model forward on each chunk of the embeddings
         # cosine similarity per chunk
@@ -128,8 +124,6 @@ class Retriever:
                         self.embeddings, pooled_embedding
                     )
 
-                    grouped_by_file = defaultdict(list)
-
                     for ind in range(similarity_matrix.shape[0]):
                         test = self.unittest_names[ind]
                         score = similarity_matrix[ind]
@@ -147,10 +141,7 @@ class Retriever:
         os.makedirs("assets/mappings", exist_ok=True)
         new_mapping = {}
         for file, score in mapping.items():
-            clean_file = os.path.relpath(
-                file, REPO_ROOT.parent / "pytorch/test"
-            )
-            new_mapping[clean_file] = score
+            new_mapping[file] = score
         with open(
             REPO_ROOT / "assets/mappings" / self.output_filename, "w"
         ) as f:
